@@ -1,6 +1,6 @@
 const userstable = `
   CREATE TABLE if not exists users (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    userPk INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nickname VARCHAR(20) NOT NULL,
     userId VARCHAR(20) NOT NULL,
     password CHAR(88) NOT NULL,
@@ -13,6 +13,6 @@ const userstable = `
     profileImg VARCHAR(225) NOT NULL DEFAULT '',
     UNIQUE INDEX nickname_UNIQUE (nickname ASC) VISIBLE,
     UNIQUE INDEX userId_UNIQUE (userId ASC) VISIBLE,
-    PRIMARY KEY (id));`;
+    PRIMARY KEY (userPk));`;
 
 export default userstable;

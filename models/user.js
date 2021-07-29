@@ -1,6 +1,6 @@
 const users = `
   CREATE TABLE if not exists users (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    userPk INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nickname VARCHAR(20) NOT NULL,
     userId VARCHAR(20) NOT NULL,
     password CHAR(88) NOT NULL,

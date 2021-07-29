@@ -1,7 +1,7 @@
 const trips = `
   CREATE TABLE if not exists trips (
     tripId INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    id INT UNSIGNED NOT NULL,
+    userPk INT UNSIGNED NOT NULL,
     region VARCHAR(20) NOT NULL,
     city VARCHAR(20) NOT NULL,
     startDate DATE NOT NULL,

@@ -1,2 +1,5 @@
 node_modules
-prettier.config.js
+.prettierrc.js
+.env
+.gitignore
+test/t.js

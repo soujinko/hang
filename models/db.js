@@ -1,5 +1,5 @@
-import mysql from "mysql";
-import config from "../config/db_config.js";
+import mysql from 'mysql';
+import config from '../config/db_config.js';
 
 // connection 모듈화
 const pool = mysql.createPool(config);

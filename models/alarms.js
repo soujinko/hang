@@ -1,5 +1,5 @@
-const alarmstable = `
-CREATE TABLE if not exists alarms (
+const alarms = `
+  CREATE TABLE if not exists alarms (
     requestId INT UNSIGNED NOT NULL,
     checked TINYINT NULL DEFAULT 0,
     INDEX fk_alarms_requests1_idx (requestId ASC) VISIBLE,
@@ -8,4 +8,4 @@ CREATE TABLE if not exists alarms (
       REFERENCES HANG.requests (requestId)
       ON DELETE CASCADE
       ON UPDATE NO ACTION)`;
-export default alarmstable;
+export default alarms;

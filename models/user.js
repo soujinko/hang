@@ -1,4 +1,4 @@
-const userstable = `
+const users = `
   CREATE TABLE if not exists users (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     nickname VARCHAR(20) NOT NULL,
@@ -11,8 +11,8 @@ const userstable = `
     age CHAR(2) NOT NULL,
     guide TINYINT UNSIGNED NULL DEFAULT NULL,
     profileImg VARCHAR(225) NOT NULL DEFAULT '',
-    UNIQUE INDEX nickname_UNIQUE (nickname ASC) VISIBLE,
-    UNIQUE INDEX userId_UNIQUE (userId ASC) VISIBLE,
-    PRIMARY KEY (id));`;
+      UNIQUE INDEX nickname_UNIQUE (nickname ASC) VISIBLE,
+      UNIQUE INDEX userId_UNIQUE (userId ASC) VISIBLE,
+      PRIMARY KEY (id));`;
 
-export default userstable;
+export default users;

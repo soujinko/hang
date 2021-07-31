@@ -7,12 +7,12 @@ const trips = `
     startDate DATE NOT NULL,
     endDate DATE NOT NULL,
     tripInfo VARCHAR(500) NULL DEFAULT NULL,
-    partner VARCHAR(20) NOT NULL DEFAULT 'anonymous',
+    partner INT DEFAULT NULL,
     PRIMARY KEY (tripId),
-    INDEX fk_trips_users1_idx (id ASC) VISIBLE,
+    INDEX fk_trips_users1_idx (userPk ASC) VISIBLE,
     CONSTRAINT fk_trips_users1
-      FOREIGN KEY (id)
-      REFERENCES HANG.users (id)
+      FOREIGN KEY (userPk)
+      REFERENCES HANG.users (userPk)
       ON DELETE NO ACTION
       ON UPDATE NO ACTION)`;
 

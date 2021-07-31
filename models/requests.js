@@ -2,8 +2,8 @@ const requests = `
   CREATE TABLE if not exists requests (
     requestId INT UNSIGNED NOT NULL AUTO_INCREMENT,
     tripId INT UNSIGNED NOT NULL,
-    reqId VARCHAR(20) NOT NULL,
-    recId VARCHAR(20) NOT NULL,
+    reqPk INT UNSIGNED NOT NULL,
+    recPk INT UNSIGNED NOT NULL,
     status TINYINT NULL DEFAULT 1,
     refCnt INT UNSIGNED NOT NULL DEFAULT 0,
     PRIMARY KEY (requestId),

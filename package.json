@@ -1,23 +1,42 @@
 {
   "name": "guidy",
   "version": "1.0.0",
-  "description": "final project Guidy",
+  "description": "final project HANG",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha -r @babel/register ./test/*.js",
     "start": "npx nodemon ./index.js"
   },
   "author": "변정섭 고수진",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@babel/core": "^7.14.8",
+    "cookie-parser": "^1.4.5",
     "cors": "^2.8.5",
+    "csurf": "^1.11.0",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
+    "helmet": "^4.6.0",
+    "morgan": "^1.10.0",
     "mysql": "^2.18.1",
-    "mysql2": "^2.2.5"
+    "mysql2": "^2.2.5",
+    "passport": "^0.4.1",
+    "passport-jwt": "^4.0.0",
+    "passport-local": "^1.0.0",
+    "socket.io": "^4.1.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.12"
+    "@babel/register": "^7.14.5",
+    "chai": "^4.3.4",
+    "eslint": "^7.31.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "mocha": "^9.0.3",
+    "nodemon": "^2.0.12",
+    "prettier": "^2.3.2",
+    "supertest": "^6.1.4",
+    "swagger-jsdoc": "^6.1.0",
+    "swagger-ui-express": "^4.1.6"
   }
 }

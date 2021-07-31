@@ -42,11 +42,11 @@ router.get("/", async (req, res) => {
         where b.region ='${searchRegion}' and b.partnerPk is NULL ORDER BY RAND() LIMIT 3 `;
 
         conn.query(findguides, function (err, result) {
-          guide = JSON.stringify(result);
+          guide = Object.values(JSON.parse(JSON.stringify(result)));
         });
         conn.query(findtravelers, function (err, result) {
-          traveler = JSON.stringify(result);
-          console.log("랜덤 여행자 조회", traveler);
+          traveler = Object.values(JSON.parse(JSON.stringify(result)));
+          // traveler = JSON.stringify(result).replace(/["']/gi, "");
           res.send({ promise, guide, traveler });
         });
       });
@@ -58,6 +58,7 @@ router.get("/", async (req, res) => {
     res.status(400).json({
       errorMessage: "메인페이지 조회 실패",
     });
+  } finally {
   }
 });
 export default router;

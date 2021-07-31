@@ -6,14 +6,12 @@ import getConnection from "../models/db.js";
 router.get("/", async (req, res) => {
   try {
     const { userPk } = res.locals;
-    let findlike = `SELECT * FROM users `;
+    let findlike = `SELECT a.* FROM users a left join likes b on a.userPk = b.targetPk where b.userPk=${userPk}`;
 
     getConnection(async (conn) => {
       await conn.query(findlike, function (err, result) {
-        console.log(result);
-
-        conn.release();
-        res.status(200);
+        let likeusers = Object.values(JSON.parse(JSON.stringify(result)));
+        res.send({ likeusers });
       });
     });
   } catch (err) {
@@ -25,52 +23,46 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  try {
-    const { userPk } = res.locals;
-    const { targetPk } = req.body;
-    let savelike = `INSERT INTO likes(targetId, id)VALUES('${targetPk}', '${userPk}')`;
+  getConnection(async (conn) => {
+    try {
+      // const { userPk } = res.locals;
+      const { targetPk, userPk } = req.body;
+      console.log();
+      let savelike = `INSERT INTO likes(targetPk, userPk)VALUES(${targetPk}, ${userPk})`;
 
-    getConnection(async (conn) => {
       await conn.query(savelike, function (err, result) {
-        console.log(result);
-
-        conn.release();
-        res.status(200);
+        res.status(200).send();
       });
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      errorMessage: "좋아요 실패",
-    });
-  }
+    } catch (err) {
+      console.log(err);
+      res.status(400).json({
+        errorMessage: "좋아요 실패",
+      });
+    } finally {
+      conn.release();
+    }
+  });
 });
 
-router.delete("/", async (req, res) => {
-  try {
-    const { userPk } = res.locals;
-    const { targetPk } = req.body;
-    let deletelike = `DELETE FROM likes WHRER userPk='${userPk}' AND targetPk='${targetPk}'`;
+router.post("/delete", async (req, res) => {
+  getConnection(async (conn) => {
+    try {
+      // const { userPk } = res.locals;
+      const { targetPk, userPk } = req.body;
+      let deletelike = `DELETE FROM likes WHERE userPk=${userPk} AND targetPk=${targetPk}`;
 
-    getConnection(async (conn) => {
       await conn.query(deletelike, function (err, result) {
-        console.log(result);
-        conn.release();
-        res.status(200);
+        res.status(200).send();
       });
-    });
-  } catch (err) {
-    conn.release();
-    console.log(err);
-    res.status(400).json({
-      errorMessage: "좋아요 취소 실패",
-    });
-  }
+    } catch (err) {
+      console.log(err);
+      res.status(400).json({
+        errorMessage: "좋아요 취소 실패",
+      });
+    } finally {
+      conn.release();
+    }
+  });
 });
 
-// let like = `INSERT INTO likes(targetId, id)VALUES('${targetId}', '${id}')`;
-// let find = `SELECT * FROM users LEFT JOIN likes ON users.id = likes.id where users.id='${id}'`;
-// let data =
-//   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('말랑', 'sj23', '서초구', '서울','30', 0 )";
-// let user = "select id from users where nickname='고수진' or nickname='말랑'";
 export default router;

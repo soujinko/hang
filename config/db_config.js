@@ -1,13 +1,14 @@
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const config = {
   host: "localhost",
   user: "root",
-  password: process.env.dbpassword,
+  password: "rhtnwls1541!",
   database: "hang",
-  connectionLimit: 10,
-  // debug: true,
+  connectionLimit: 30,
+  debug: true,
 };
 
 export default config;

@@ -83,12 +83,13 @@ router.post('/p_auth', (req, res, next) => {
 	})
 })
 
-router.post('/', (req, res, next) => {
+router.post('/duplicate', (req, res, next) => {
 	const { userId, nickname } = req.body;
+	const sequel = userId ? `SELECT userPk FROM users WHERE userId='${userId}'`: `SELECT userPk FROM users WHERE nickname='${nickname}'`
 	getConnection(async (conn) => {
 		try{
 			conn.beginTransaction();
-			conn.query(`SELECT userPk FROM users WHERE userId='${userId}' OR nickname='${nickname}'`, function (err, data) {
+			conn.query(sequel, function (err, data) {
 				if (err) {
 					conn.release()
 					throw err
@@ -96,14 +97,16 @@ router.post('/', (req, res, next) => {
 					conn.release()
 					throw new Error({ status : 409 })
 				} else {
-					next()
+					res.sendStatus(200)
 				}
 			})
 		} catch(err) {
 			next(err)
 		}
 	})
-	}, (req, res, next)=>{
+})
+
+router.post('/', (req, res, next)=>{
 	const { userId, nickname, password, age, region, city, profileImg, gender, pNum } = req.body;
 	getConnection((conn) => {
 		try {

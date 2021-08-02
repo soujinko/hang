@@ -15,4 +15,4 @@ const getConnection = function (callback) {
 
 const connection = await mysql2.createPool(config).getConnection(async(conn)=>conn)
 
-export {getConnection, connection};
+export { getConnection, connection };

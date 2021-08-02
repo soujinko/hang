@@ -1,21 +1,24 @@
 import express from "express";
-const router = express.Router();
-import getConnection from "../models/db.js";
+import { getConnection } from "../models/db.js";
 
-router.get("/:nickname", async (req, res) => {
+const router = express.Router();
+
+router.get("/:nickname", async (req, res, next) => {
   let userInfo;
   let tripInfo;
   getConnection(async (conn) => {
     try {
-      const { userPk } = res.locals;
+      const { userPk } = res.locals.user;
       const { nickname } = req.params;
-      const finduser = `select * from users where userPk ='${nickname}'`;
+      const findUser = `select * from users where userPk ='${nickname}'`;
 
-      await conn.query(finduser, function (err, result) {
+      await conn.query(findUser, function (err, result) {
+        if (err) throw err;
         userInfo = Object.values(JSON.parse(JSON.stringify(result)))[0];
         conn.query(
           `select * from likes where userPk ='${userPk}' and targetPk = '${nickname}'`,
           function (err, result) {
+            if (err) throw err;
             if (result.length !== 0) {
               userInfo.like = true;
             } else {
@@ -27,8 +30,9 @@ router.get("/:nickname", async (req, res) => {
         conn.query(
           `select * from trips where userPk ='${nickname}'`,
           function (err, result) {
+            if (err) throw err;
             tripInfo = Object.values(JSON.parse(JSON.stringify(result)));
-            res.send({ userInfo, tripInfo });
+            res.status(200).send({ userInfo, tripInfo });
           }
         );
       });
@@ -40,10 +44,10 @@ router.get("/:nickname", async (req, res) => {
       //     }
       //   );
     } catch (err) {
+      conn.rollback();
       console.log(err);
-      res.status(400).json({
-        errorMessage: "유저 조회 실패",
-      });
+      err.status = 400
+      next(err)
     } finally {
       conn.release();
     }

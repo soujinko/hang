@@ -1,5 +1,5 @@
-import getConnection from './db.js';
-import users from './user.js';
+import { getConnection } from './db.js';
+import users from './users.js';
 import trips from './trips.js';
 import likes from './likes.js';
 import requests from './requests.js';
@@ -9,28 +9,28 @@ import alarms from './alarms.js';
 
 getConnection(async (conn) => {
 	// 유저 테이블 생성
-	await conn.query(users, function (err, result) {
+	conn.query(users, function (err, result) {
 		if (err) throw err;
 		console.log('users table created');
 	});
 
 	// 트립 테이블 생성
-	await conn.query(trips, function (err, result) {
+	conn.query(trips, function (err, result) {
 		if (err) throw err;
 		console.log('trips table created');
 	});
 	// 라이크 테이블 생성
-	await conn.query(likes, function (err, result) {
+	conn.query(likes, function (err, result) {
 		if (err) throw err;
 		console.log('likes table created');
 	});
 	// 리퀘스트 테이블 생성
-	await conn.query(requests, function (err, result) {
+	conn.query(requests, function (err, result) {
 		if (err) throw err;
 		console.log('requests table created');
 	});
 	// 알람 테이블 생성
-	await conn.query(alarms, function (err, result) {
+	conn.query(alarms, function (err, result) {
 		if (err) throw err;
 		console.log('alarms table created');
 	});

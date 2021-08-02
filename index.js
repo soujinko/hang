@@ -6,12 +6,11 @@ import logger from 'morgan';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import csrfProtection from 'csurf';
-import errorHandlers from './error_handlers.js';
-import swaggerDocs from './swaggerDocs.js';
+import errorHandlers from './util/error_handlers.js';
 import http from 'http';
 import passport from 'passport';
 import passportConfig from './passport/passport.js'
-
+import swaggerDocs from './config/swagger_config.js'
 
 const app = express();
 const server = http.createServer(app);
@@ -36,11 +35,11 @@ passportConfig()
 
 
 app.use('/api', router);
-app.use('/docs', swaggerDocs);
+app.use('/docs', swaggerDocs)
 app.use(errorHandlers);
 
 server.listen(process.env.PORT || 3000, () => {
 	console.log('서버 연결 성공');
 });
 
-export default server;
+export { server, app };

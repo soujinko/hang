@@ -1,24 +1,25 @@
+import { getConnection } from "../models/db.js";
 import express from "express";
+
 const router = express.Router();
-import getConnection from "../models/db.js";
 
 // 좋아요
 router.get("/", async (req, res) => {
   try {
     const { userPk } = res.locals;
-    let findlike = `SELECT a.* FROM users a left join likes b on a.userPk = b.targetPk where b.userPk=${userPk}`;
+    let findLike = `SELECT a.* FROM users a left join likes b on a.userPk = b.targetPk where b.userPk=${userPk}`;
 
-    getConnection(async (conn) => {
-      await conn.query(findlike, function (err, result) {
-        let likeusers = Object.values(JSON.parse(JSON.stringify(result)));
-        res.send({ likeusers });
+    getConnection((conn) => {
+      conn.query(findLike, function (err, result) {
+        if (err) next(err);
+        let likeUsers = Object.values(JSON.parse(JSON.stringify(result)));
+        res.status(200).json({ likeUsers });
       });
     });
   } catch (err) {
+    err.status = 400;
     console.log(err);
-    res.status(400).json({
-      errorMessage: "좋아요 실패",
-    });
+    next(err)
   }
 });
 
@@ -28,9 +29,9 @@ router.post("/", async (req, res) => {
       // const { userPk } = res.locals;
       const { targetPk, userPk } = req.body;
       console.log();
-      let savelike = `INSERT INTO likes(targetPk, userPk)VALUES(${targetPk}, ${userPk})`;
+      let saveLike = `INSERT INTO likes(targetPk, userPk)VALUES(${targetPk}, ${userPk})`;
 
-      await conn.query(savelike, function (err, result) {
+      await conn.query(saveLike, function (err, result) {
         res.status(200).send();
       });
     } catch (err) {
@@ -44,14 +45,14 @@ router.post("/", async (req, res) => {
   });
 });
 
-router.post("/delete", async (req, res) => {
+router.delete("/", async (req, res) => {
   getConnection(async (conn) => {
     try {
       // const { userPk } = res.locals;
       const { targetPk, userPk } = req.body;
-      let deletelike = `DELETE FROM likes WHERE userPk=${userPk} AND targetPk=${targetPk}`;
+      let deleteLike = `DELETE FROM likes WHERE userPk=${userPk} AND targetPk=${targetPk}`;
 
-      await conn.query(deletelike, function (err, result) {
+      await conn.query(deleteLike, function (err, result) {
         res.status(200).send();
       });
     } catch (err) {

@@ -1,14 +1,87 @@
 import express from 'express';
 import crypto from 'crypto';
-import { getConnection } from '../models/db.js';
+import { getConnection, connection } from '../models/db.js';
+import NC_SMS from '../services/NC_SMS.js'
 import dotenv from 'dotenv';
 import passport from 'passport';
 import jwt from 'jsonwebtoken';
 import verification from '../middleware/verification.js';
+import asyncHandle from '../util/async_handler.js'
 
 dotenv.config();
 
 const router = express.Router();
+
+// pk, nick, profileImg전달
+router.get('/', verification, (req, res, next) => {
+	const { userPk } = res.locals.user
+	getConnection((conn) => {
+		try{
+			conn.beginTransaction()
+			conn.query(`SELECT userPk, nickname, profileImg FROM users WHERE userPk=${userPk}`, (err, data) => {
+				if (err) throw err
+				if (data.length > 0) {
+					const { userPk, nickname, profileImg } = JSON.parse(JSON.stringify(data[0]))
+				res.status(200).json({ userPk, nickname, profileImg })
+				} else res.status(400)
+			})
+		} catch(err){
+			next(err)
+		}
+	})
+})
+
+router.post('/sms_auth', (req, res, next) => {
+	const { pNum:phoneNumber } = req.body;
+	getConnection((conn) => {
+		try{
+			conn.beginTransaction();
+			conn.query(`SELECT pNum FROM users WHERE pNum='${phoneNumber}'`, (err, data) => {
+				if (err) throw err
+				if (data.length > 0) return res.sendStatus(409)
+			})
+			conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`)
+			
+			const authNumber = Math.floor(Math.random()*90000)+10000
+			NC_SMS(req, next, authNumber)
+			
+			conn.query(`INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`)
+			conn.commit();
+			conn.release();
+			res.sendStatus(200)
+		} catch(err) {
+			conn.rollback();
+			conn.release();
+			next(err);
+		}
+	})
+})
+
+router.post('/p_auth', (req, res, next) => {
+	const { pNum, aNum } = req.body;
+	getConnection((conn) => {
+		try{
+			conn.beginTransaction();
+			// 인증번호는 극히 적은 확률로 같은 숫자가 존재할 수 있음. 또한 특정 사용자가 특정 번호를 입력했다는 증명이 되어야함. 그래서 AND
+			conn.query(`SELECT * FROM auth WHERE pNum='${pNum}' AND aNum=${aNum}`, (err, data) => {
+				if (err) throw err;
+				const authInfo = JSON.parse(JSON.stringify(data))
+				if ((Math.floor(+new Date(authInfo[0]?.time)/1000)-Math.floor(+new Date()/1000)) >= -60) {
+						// 핸드폰 번호, 인증번호, 유효기간 모두 성립
+						conn.query(`DELETE FROM auth WHERE pNum='${pNum}'`);
+						conn.commit();
+						res.sendStatus(200)
+				} else res.sendStatus(401)
+				
+				conn.release()
+			})
+		} catch(err) {
+			conn.rollback();
+			conn.release();
+			next(err)
+		}
+	})
+})
 
 router.post('/', (req, res, next) => {
 	const { userId, nickname } = req.body;
@@ -16,10 +89,12 @@ router.post('/', (req, res, next) => {
 		try{
 			conn.beginTransaction();
 			conn.query(`SELECT userPk FROM users WHERE userId='${userId}' OR nickname='${nickname}'`, function (err, data) {
-				if (err) throw err;
-				if (data.length > 0) {
+				if (err) {
 					conn.release()
-					res.status(400).json({message: '이미 사용 중인 아이디 혹은 닉네임 입니다.'})
+					throw err
+				} else if (data.length > 0) {
+					conn.release()
+					throw new Error({ status : 409 })
 				} else {
 					next()
 				}
@@ -28,9 +103,9 @@ router.post('/', (req, res, next) => {
 			next(err)
 		}
 	})
-	}, (req,res,next)=>{
-	const { userId, nickname, password, age, region, city, profileImg } = req.body;
-	getConnection(async (conn) => {
+	}, (req, res, next)=>{
+	const { userId, nickname, password, age, region, city, profileImg, gender, pNum } = req.body;
+	getConnection((conn) => {
 		try {
 			conn.beginTransaction();
 
@@ -38,17 +113,17 @@ router.post('/', (req, res, next) => {
 			const hashedPassword = crypto.pbkdf2Sync(password, salt, Number(process.env.ITERATION_NUM), 64, 'SHA512').toString('base64');
 			
 			conn.query(
-				`INSERT INTO 
-         users(nickname, userId, password, salt, region, city, age, profileImg)
-         VALUES(?,?,?,?,?,?,?,?)`,
-				[nickname, userId, hashedPassword, salt, age, region, city, profileImg]
+				`INSERT INTO
+         users(nickname, userId, password, salt, region, city, age, profileImg, gender, pNum)
+         VALUES(?,?,?,?,?,?,?,?,?,?)`,
+				[nickname, userId, hashedPassword, salt, age, region, city, profileImg, gender, pNum]
 			);
 
 			conn.commit();
-			res.sendStatus(200);
+			res.sendStatus(201)
 		} catch (err) {
 			conn.rollback();
-			err.status = 400;
+			err.status = 500;
 			next(err);
 		} finally {
 			conn.release();
@@ -60,15 +135,13 @@ router.post('/signin', (req, res, next) => {
 	try {
 		passport.authenticate('local', (err, user, info) => {
 			if (err || !user) {
-				return res.status(400).json({ message: info.message });
+				return res.sendStatus(401)
 			}
 			req.login(user, { session: false }, (err) => {
 				if (err) throw err;
 				const accessToken = jwt.sign(
 					{
-						userPk: user.userPk,
-						nickname: user.nickname,
-						profileImg: user.profileImg,
+						userPk: user.userPk
 					},
 					process.env.PRIVATE_KEY,
 					{ expiresIn: '3h', algorithm: 'HS512' }
@@ -82,7 +155,6 @@ router.post('/signin', (req, res, next) => {
 						conn.commit()
 					} catch(err) {
 						conn.rollback()
-						err.status = 400;
 						next(err)
 					} finally {
 						conn.release()
@@ -91,7 +163,7 @@ router.post('/signin', (req, res, next) => {
 				
 				res.cookie( 'jwt', accessToken, { httpOnly:true });
 				res.cookie( 'refresh', refreshToken, { httpOnly:true });
-				res.status(200).json({message: info.message});
+				res.sendStatus(200)
 			});
 		})(req, res);
 	} catch {
@@ -103,6 +175,9 @@ router.get('/a', verification, (req, res) => {
 	res.send('true')
 })
 
+router.get('/b', asyncHandle(async (req, res, next) => {
+		throw new Error('사용자 정의 에러 발생')
+}))
 
 
 export default router;

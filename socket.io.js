@@ -1,4 +1,4 @@
-import server from './index.js';
+import { server } from './index.js';
 import socketIo from 'socket.io';
 
 const io = socketIo(server, {

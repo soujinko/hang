@@ -2,9 +2,9 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const config = {
-  host: "localhost",
+  host: "127.0.0.1",
   user: "root",
-  password: process.env.dbpassword,
+  password: process.env.DB_PASSWORD,
   database: "hang",
   connectionLimit: 10,
   // debug: true,

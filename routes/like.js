@@ -1,64 +1,89 @@
 import express from "express";
 const router = express.Router();
-import getConnection from "../models/db.js";
+import { getConnection } from "../models/db.js";
 
 // 좋아요
 router.get("/", async (req, res) => {
-  try {
-    const { userPk } = res.locals;
-    let findlike = `SELECT a.* FROM users a left join likes b on a.userPk = b.targetPk where b.userPk=${userPk}`;
+  getConnection(async (conn) => {
+    try {
+      conn.beginTransaction();
+      const { userPk } = res.locals.user;
+      // 내가 좋아요한 목록 불러오기
+      let findlike = `SELECT a.* FROM userView a left join likes b on a.userPk = b.targetPk where b.userPk=${userPk}`;
 
-    getConnection(async (conn) => {
-      await conn.query(findlike, function (err, result) {
+      conn.query(findlike, function (err, result) {
+        if (err) {
+          console.error(err);
+          conn.rollback();
+          next(err);
+        }
         let likeusers = Object.values(JSON.parse(JSON.stringify(result)));
         res.send({ likeusers });
       });
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      errorMessage: "좋아요 실패",
-    });
-  }
-});
-
-router.post("/", async (req, res) => {
-  getConnection(async (conn) => {
-    try {
-      // const { userPk } = res.locals;
-      const { targetPk, userPk } = req.body;
-      console.log();
-      let savelike = `INSERT INTO likes(targetPk, userPk)VALUES(${targetPk}, ${userPk})`;
-
-      await conn.query(savelike, function (err, result) {
-        res.status(200).send();
-      });
+      conn.commit();
     } catch (err) {
-      console.log(err);
-      res.status(400).json({
-        errorMessage: "좋아요 실패",
-      });
+      console.error(err);
+      conn.rollback();
+      err.status = 400;
+      next(err);
     } finally {
       conn.release();
     }
   });
 });
 
-router.post("/delete", async (req, res) => {
+router.post("/", async (req, res) => {
   getConnection(async (conn) => {
     try {
-      // const { userPk } = res.locals;
-      const { targetPk, userPk } = req.body;
-      let deletelike = `DELETE FROM likes WHERE userPk=${userPk} AND targetPk=${targetPk}`;
+      conn.beginTransaction();
+      const { userPk } = res.locals.user;
+      const { targetPk } = req.body;
+      // 좋아요 저장하기
+      let savelike = `INSERT INTO likes(targetPk, userPk)VALUES(${targetPk}, ${userPk})`;
 
-      await conn.query(deletelike, function (err, result) {
+      conn.query(savelike, function (err, result) {
+        if (err) {
+          console.error(err);
+          conn.rollback();
+          next(err);
+        }
         res.status(200).send();
       });
+      conn.commit();
     } catch (err) {
-      console.log(err);
-      res.status(400).json({
-        errorMessage: "좋아요 취소 실패",
+      console.error(err);
+      conn.rollback();
+      err.status = 400;
+      next(err);
+    } finally {
+      conn.release();
+    }
+  });
+});
+
+router.delete("/", async (req, res) => {
+  getConnection(async (conn) => {
+    try {
+      conn.beginTransaction();
+      const { userPk } = res.locals.user;
+      const { targetPk } = req.body;
+      // 좋아요 취소하기
+      let deletelike = `DELETE FROM likes WHERE userPk=${userPk} AND targetPk=${targetPk}`;
+
+      conn.query(deletelike, function (err, result) {
+        if (err) {
+          console.error(err);
+          conn.rollback();
+          next(err);
+        }
+        res.status(200).send();
       });
+      conn.commit();
+    } catch (err) {
+      console.error(err);
+      conn.rollback();
+      err.status = 400;
+      next(err);
     } finally {
       conn.release();
     }

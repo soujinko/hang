@@ -1,31 +1,42 @@
 import express from "express";
+import { getConnection } from "../models/db.js";
+
 const router = express.Router();
-import getConnection from "../models/db.js";
 
-router.get("/", async (req, res) => {
-  try {
-    // const { userPk } = res.locals;
-    let promise = {};
-    let guide = [];
-    let traveler = [];
-    let findtrip =
-      "select *  from trips where userPk=1 AND partnerPk is not NULL ORDER BY startDate ASC LIMIT 1";
-    let finduser = "select region from users where userPk = 1";
-
-    getConnection(async (conn) => {
-      await conn.query(findtrip, function (err, result) {
+router.get("/:userPk", async (req, res) => {
+  getConnection(async (conn) => {
+    try {
+      const { userPk } = res.locals.user;
+      let promise = {};
+      let guide = [];
+      let traveler = [];
+      const findTrip = `select * from trips where userPk=${userPk} AND partner is not NULL ORDER BY startDate ASC LIMIT 1`;
+      const findUsers = `select region from users where userPk = ${userPk}`;
+      conn.beginTransaction();
+      // 확정된 내 여행정보 1개 가져오기
+      conn.query(findTrip, (err, result) => {
+        if (err) {
+          console.error(err);
+          conn.rollback();
+          next(err);
+        }
         if (result.length > 0) {
-          const endDate = result[0].endDate;
-          const startDate = result[0].startDate;
-          const partnerPk = result[0].partnerPk;
-          //   console.log("dddd", endDate, startDate, partnerPk);
-          let finduser = `select * from users where userPk='${partnerPk}'`;
-          conn.query(finduser, function (err, result) {
+          const { endDate } = result[0];
+          const { startDate } = result[0];
+          const { partner } = result[0];
+
+          const findUser = `select * from userView where userPk='${partner}'`;
+          // 나와 약속된 사람의 프로필 가져오기
+          conn.query(findUser, (err, result) => {
+            if (err) {
+              console.error(err);
+              conn.rollback();
+              next(err);
+            }
             const partnerImg = result[0].profileImg;
-            const prtnernick = result[0].nickname;
-            // console.log("sssss", partnerImg, prtnernick);
+            const prtnerNick = result[0].nickname;
             promise.profileImg = partnerImg;
-            promise.nickname = prtnernick;
+            promise.nickname = prtnerNick;
             promise.startDate = startDate;
             promise.endDate = endDate;
             console.log(promise);
@@ -35,32 +46,77 @@ router.get("/", async (req, res) => {
         }
       });
 
-      await conn.query(finduser, function (err, result) {
+      conn.query(findUsers, (err, result) => {
+        if (err) {
+          console.error(err);
+          conn.rollback();
+          next(err);
+        }
         const searchRegion = result[0].region;
-        let findguides = `select * from users where region ='${searchRegion}' and guide=1 ORDER BY RAND() LIMIT 3`;
-        let findtravelers = `select a.* from users a left join trips b on a.userPk = b.userPk
-        where b.region ='${searchRegion}' and b.partnerPk is NULL ORDER BY RAND() LIMIT 3 `;
+        const findGuides = `select * from userView where region ='${searchRegion}' and guide=1 and userPk not in (${userPk}) ORDER BY RAND() LIMIT 3`;
+        const findTravelers = `select a.* from userView a left join trips b on a.userPk = b.userPk where b.region ='${searchRegion}' and b.partner is NULL Group by userPk ORDER BY RAND() LIMIT 3 `;
+        const likeList = `select targetPk from likes where userPk=${userPk} `;
+        // 내가 좋아요한 사람 리스트
+        conn.query(likeList, (err, result) => {
+          if (err) {
+            console.error(err);
+            conn.rollback();
+            next(err);
+          }
+          const mylikes = Object.values(JSON.parse(JSON.stringify(result))).map(
+            (e) => parseInt(e.targetPk)
+          );
+          console.log("내가 좋아요한 목록", mylikes);
 
-        conn.query(findguides, function (err, result) {
-          guide = Object.values(JSON.parse(JSON.stringify(result)));
-        });
-        conn.query(findtravelers, function (err, result) {
-          traveler = Object.values(JSON.parse(JSON.stringify(result)));
-          // traveler = JSON.stringify(result).replace(/["']/gi, "");
-          res.send({ promise, guide, traveler });
+          // 내지역 가이드 찾기
+          conn.query(findGuides, (err, result) => {
+            if (err) {
+              console.error(err);
+              conn.rollback();
+              next(err);
+            }
+            guide = Object.values(JSON.parse(JSON.stringify(result)));
+            guide.forEach((e) => {
+              // 내가 좋아요한 목록에 있으면 true
+              if (mylikes.includes(e.userPk)) {
+                e.like = true;
+              } else {
+                e.like = false;
+              }
+            });
+          });
+          // 내지역 여행자 찾기
+          conn.query(findTravelers, (err, result) => {
+            if (err) {
+              console.error(err);
+              conn.rollback();
+              next(err);
+            }
+            traveler = Object.values(JSON.parse(JSON.stringify(result)));
+            traveler.forEach((e) => {
+              // 내가 좋아요한 목록에 있으면 true
+              if (mylikes.includes(e.userPk)) {
+                e.like = true;
+              } else {
+                e.like = false;
+              }
+            });
+            res.send({ promise, guide, traveler });
+          });
         });
       });
-
+      conn.commit();
+    } catch (err) {
+      console.error(err);
+      conn.rollback();
+      err.status = 400;
+      next(err);
+    } finally {
       conn.release();
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(400).json({
-      errorMessage: "메인페이지 조회 실패",
-    });
-  } finally {
-  }
+    }
+  });
 });
+
 export default router;
 // let like = `INSERT INTO likes(targetId, id)VALUES('${targetId}', '${id}')`;
 // let find = `SELECT * FROM users LEFT JOIN likes ON users.id = likes.id where users.id='${id}'`;
@@ -77,7 +133,8 @@ export default router;
 // let alarm = "INSERT INTO alarms (requestId) VALUES (1)";
 
 // let trip =
-//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (2,'서초구', '서울','2021-06-02', '2021-06-12','여행가쟈')";
+//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (4,'서초구', '서울','2021-08-12', '2021-08-25','조앙조앙!!')";
+//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, partner) VALUES (1,'서초구', '서울','2021-08-02', '2021-08-05','기대된당', 2)";
 // let finduser =
-//   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('suzy1233', 'suzy1233', '서초구', '서울','10', 1 )";
+//   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('우라232', '우라232', '서초구', '서울','20', 1 )";
 // 확정 약속 가져오기

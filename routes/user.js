@@ -1,21 +1,33 @@
 import express from "express";
 const router = express.Router();
-import getConnection from "../models/db.js";
+import { getConnection } from "../models/db.js";
 
-router.get("/:nickname", async (req, res) => {
-  let userInfo;
-  let tripInfo;
+router.get("/:pagePk", async (req, res) => {
   getConnection(async (conn) => {
+    conn.beginTransaction();
+    let userInfo;
+    let tripInfo;
     try {
-      const { userPk } = res.locals;
-      const { nickname } = req.params;
-      const finduser = `select * from users where userPk ='${nickname}'`;
-
-      await conn.query(finduser, function (err, result) {
+      const { userPk } = res.locals.user;
+      const { pagePk } = req.params;
+      const finduser = `select * from userView where userPk ='${pagePk}'`;
+      // 해당 페이지 유저의 프로필 정보 가져오기
+      conn.query(finduser, function (err, result) {
+        if (err) {
+          console.error(err);
+          conn.rollback();
+          next(err);
+        }
         userInfo = Object.values(JSON.parse(JSON.stringify(result)))[0];
         conn.query(
-          `select * from likes where userPk ='${userPk}' and targetPk = '${nickname}'`,
+          `select * from likes where userPk ='${userPk}' and targetPk = '${pagePk}'`,
           function (err, result) {
+            if (err) {
+              console.error(err);
+              conn.rollback();
+              next(err);
+            }
+            // 내가 좋아요 했으면 true
             if (result.length !== 0) {
               userInfo.like = true;
             } else {
@@ -23,27 +35,26 @@ router.get("/:nickname", async (req, res) => {
             }
           }
         );
-        console.log("userInfo", userInfo);
+        // 페이지 유저의 여행 정보 가져오기
         conn.query(
-          `select * from trips where userPk ='${nickname}'`,
+          `select * from trips where userPk ='${pagePk}'`,
           function (err, result) {
+            if (err) {
+              console.error(err);
+              conn.rollback();
+              next(err);
+            }
             tripInfo = Object.values(JSON.parse(JSON.stringify(result)));
             res.send({ userInfo, tripInfo });
           }
         );
       });
-
-      //   await conn.query(
-      //     "insert into likes(targetPk, userPk)VALUES(1, 2) ",
-      //     function (err, result) {
-      //       console.log(result);
-      //     }
-      //   );
+      conn.commit();
     } catch (err) {
       console.log(err);
-      res.status(400).json({
-        errorMessage: "유저 조회 실패",
-      });
+      conn.rollback();
+      err.status = 400;
+      next(err);
     } finally {
       conn.release();
     }

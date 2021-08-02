@@ -1,16 +1,16 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import router from './routes/index.js';
-import logger from 'morgan';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
-import csrfProtection from 'csurf';
-import errorHandlers from './util/error_handlers.js';
-import http from 'http';
-import passport from 'passport';
-import passportConfig from './passport/passport.js'
-import swaggerDocs from './config/swagger_config.js'
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import router from "./routes/index.js";
+import logger from "morgan";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import csrfProtection from "csurf";
+import errorHandlers from "./util/error_handlers.js";
+import http from "http";
+import passport from "passport";
+import passportConfig from "./passport/passport.js";
+import swaggerDocs from "./config/swagger_config.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -18,8 +18,8 @@ const server = http.createServer(app);
 dotenv.config();
 
 const corsOption = {
-  origin: "",
-  Credential: true,
+  origin: "http://localhost:3000",
+  // Credential: true,
   optionSuccessStatus: 200,
 };
 
@@ -33,13 +33,8 @@ app.use(express.urlencoded({ extended: false }));
 app.use(passport.initialize());
 passportConfig();
 
-<<<<<<< HEAD
 app.use("/api", router);
 app.use("/docs", swaggerDocs);
-=======
-app.use('/api', router);
-app.use('/docs', swaggerDocs)
->>>>>>> c53af9e60bee3e595383afafa38b23670726b9ac
 app.use(errorHandlers);
 
 server.listen(3000, () => {

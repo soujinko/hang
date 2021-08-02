@@ -80,19 +80,23 @@ router.get("/:userPk", async (req, res) => {
                 let promisList = Object.values(
                   JSON.parse(JSON.stringify(result))
                 );
-                promisList.forEach(e => {
-                    // 내가 받은 요청
-                    if (e.recPk = userPk){
-                        // 나에게 누가 가이드가 되어주겠다 신청
-                        if (myTripLists.includes(e.tripId)){
-                            conn.query(
-                                `select * from users where userPk=${e.reqPk}`,
+                promisList.forEach((e) => {
+                  // 내가 받은 요청
+                  if ((e.recPk = userPk)) {
+                    // 나에게 누가 가이드가 되어주겠다 신청
+                    if (myTripLists.includes(e.tripId)) {
+                      conn.query(
+                        `select a.*, b.* from users a, trips b where a.userPk=${e.reqPk} or b.tripId=${e.tripId}`,
+                        function (err, result) {
+                          console.log(result);
+                          //   let promisList = Object.values(
+                          //     JSON.parse(JSON.stringify(result))
+                          //   );
                         }
-                       
-
-
+                      );
                     }
-                })
+                  }
+                });
                 console.log(promisList);
               }
             );

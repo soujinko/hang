@@ -1,9 +1,10 @@
 import { getConnection } from "./db.js";
-import users from "./user.js";
+import users from "./users.js";
 import trips from "./trips.js";
 import likes from "./likes.js";
 import requests from "./requests.js";
 import alarms from "./alarms.js";
+import auth from "./auth.js";
 
 // 이 파일을 실행해서 db를 세팅하세요
 
@@ -36,8 +37,14 @@ function createDb() {
       if (err) throw err;
       console.log("alarms table created");
     });
+
+    await conn.query(auth, (err, result) => {
+      if (err) throw err;
+      console.log("auth table created");
+    });
+
     await conn.query(
-      "create view userView as select userPk, nickname, userId, region, city, age, guide, profileImg from hang.users",
+      "create view userView as select userPk, nickname, userId, region, city, age, gender,guide, profileImg from hang.users",
       (err, result) => {
         if (err) throw err;
         console.log("view table created");

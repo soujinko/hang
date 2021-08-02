@@ -2,7 +2,6 @@ import { getConnection } from "../models/db.js";
 import express from "express";
 
 const router = express.Router();
-import { getConnection } from "../models/db.js";
 
 // 좋아요
 router.get("/", async (req, res) => {

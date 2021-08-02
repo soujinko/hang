@@ -124,7 +124,7 @@ export default router;
 //   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('말랑', 'sj23', '서초구', '서울','30', 0 )";
 // let user = "select id from users where nickname='고수진' or nickname='말랑'";
 
-// let finduser =
+// let findUser =
 // "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('콜라', 'cola', '서면', '부산','10', 0 )";
 // let trip =
 // "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (4,'서초구', '서울','2021-08-01', '2021-08-23','기대된당!' )";

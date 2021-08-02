@@ -25,7 +25,7 @@ const localVerify = (userId, password, done) => {
 					
 					if (user.length < 1)
 						return done(null, false, {
-							message: '등록되지 않은 사용자입니다.',
+							message: 'ID or password invalid',
 						});
 
 					const { salt, password: storedPassword } = JSON.parse(JSON.stringify(user[0]));
@@ -33,10 +33,10 @@ const localVerify = (userId, password, done) => {
 
 					if (storedPassword !== hashedPassword) {
 						return done(null, false, {
-							message: '아이디 혹은 비밀번호가 정확하지 않습니다.',
+							message: 'ID or password invalid',
 						});
 					} else {
-						return done(null, user[0], { message: '로그인 성공' });
+						return done(null, user[0], { message: 'Success' });
 					}
 				}
 			);

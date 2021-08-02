@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const config = {
-  host: "localhost",
+  host: "127.0.0.1",
   user: "root",
   password: "rhtnwls1541!",
   database: "hang",

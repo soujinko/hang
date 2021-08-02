@@ -73,22 +73,22 @@ const verification = async (req, res, next) => {
       
       await connection.beginTransaction();
       const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk=${expiredUser.userPk}`)))[0][0].refreshToken
-      await connection.release()
       
-      if (DBRefreshToken !== req.cookies.refresh) throw new Error({message:'유효하지 않은 토큰입니다.'})
+      await connection.release()
+      if (DBRefreshToken !== req.cookies.refresh) throw new Error()
       
       // jwt는 만료되었으나 변형되지 않았고, refresh는 유효하며 변형되지 않았을 때.
       const newAccessToken = jwt.sign(
 					{
-						userPk: expiredUser.userPk,
-						nickname: expiredUser.nickname,
-						profileImg: expiredUser.profileImg,
+						userPk: expiredUser.userPk
 					},
 					process.env.PRIVATE_KEY,
 					{ expiresIn: '3h', algorithm: 'HS512' }
 				);
       res.cookie('jwt', newAccessToken, { httpOnly: true })
+      res.locals.user = expiredUser
       next()
+      
     } catch {
       // 1.jwt와 refresh가 모두 expired되었거나, 
       // 2.jwt가 무효하고 refresh가 변형이 되었거나,

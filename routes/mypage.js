@@ -86,7 +86,7 @@ router.get("/:userPk", async (req, res) => {
                         // 나에게 누가 가이드가 되어주겠다 신청
                         if (myTripLists.includes(e.tripId)){
                             conn.query(
-                                `select * from users a left join trips b where recPk=${userPk} or reqPk=${userPk}`,
+                                `select * from users where userPk=${e.reqPk}`,
                         }
                        
 

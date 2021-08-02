@@ -1,0 +1,96 @@
+paths:
+  /api/like:
+    get:
+      summary: get list of like users
+      tags: [Like]
+      description: GET like
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userPk:
+                      type: number
+                    nickname:
+                      type: string
+                    userId:
+                      type: string
+                    region:
+                      type: string
+                    city:
+                      type: string
+                    age:
+                      type: number
+                    guide:
+                      type: boolean
+                    profileImg:
+                      type: string
+                  example:
+                    userPk: 3
+                    nickname: kingsujin
+                    userId: sujin123
+                    region: 경남
+                    city: 부산
+                    age: 20
+                    guide: 1
+                    profileImg: random/url/path
+        400:
+          description: Cannot find user
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors
+    post:
+      summary: add liked user
+      tags: [Like]
+      description: POST liked user
+      
+      responses:
+        200:
+          description: Success
+        400:
+          description: Cannot find user
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors  
+      
+      parameters:
+        - name: targetPk
+          in: body
+          description: Unique PK of a user
+          type: number
+          required: true
+          example:
+            targetPk: 1
+      
+    delete:
+      summary: delete liked user
+      tags: [Like]
+      description: DELETE liked user
+      
+      responses:
+        200:
+          description: Success
+        400:
+          description: Cannot find user
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors 
+      
+      parameters:
+        - name: targetPk
+          in: body
+          description: Unique PK of a user
+          type: number
+          required: true
+          example:
+            targetPk: 1
+
+                

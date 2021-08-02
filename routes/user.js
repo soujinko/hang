@@ -1,4 +1,6 @@
 import express from "express";
+import { getConnection } from "../models/db.js";
+
 const router = express.Router();
 import { getConnection } from "../models/db.js";
 
@@ -45,7 +47,7 @@ router.get("/:pagePk", async (req, res) => {
               next(err);
             }
             tripInfo = Object.values(JSON.parse(JSON.stringify(result)));
-            res.send({ userInfo, tripInfo });
+            res.status(200).send({ userInfo, tripInfo });
           }
         );
       });

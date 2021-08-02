@@ -3,7 +3,7 @@ import { getConnection } from "../models/db.js";
 
 const router = express.Router();
 
-router.get("/:userPk", async (req, res) => {
+router.get("/", async (req, res) => {
   getConnection(async (conn) => {
     try {
       const { userPk } = res.locals.user;

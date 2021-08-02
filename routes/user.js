@@ -4,10 +4,10 @@ import { getConnection } from "../models/db.js";
 
 router.get("/:pagePk", async (req, res) => {
   getConnection(async (conn) => {
-    conn.beginTransaction();
-    let userInfo;
-    let tripInfo;
     try {
+      conn.beginTransaction();
+      let userInfo;
+      let tripInfo;
       const { userPk } = res.locals.user;
       const { pagePk } = req.params;
       const finduser = `select * from userView where userPk ='${pagePk}'`;

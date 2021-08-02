@@ -12,10 +12,11 @@ const options = {
       version: '0.0.1',
       description: '나만 아는 여행, 또 너만 아는 여행. HANG 입니다!',
     },
+    scheme: ['http', 'https'],
     host: '127.0.0.1:3000',
     basePath: '/',
   },
-  apis: ["./swagger/*.yaml", "./routes/users.js"],
+  apis: ["./swagger/*.yaml"],
 };
 
 const specs = swaggerJSDoc(options)

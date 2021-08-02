@@ -86,7 +86,7 @@ router.get("/:userPk", async (req, res) => {
                     // 나에게 누가 가이드가 되어주겠다 신청
                     if (myTripLists.includes(e.tripId)) {
                       conn.query(
-                        `select a.*, b.* from users a, trips b where a.userPk=${e.reqPk} or b.tripId=${e.tripId}`,
+                        `select a.*, b.* from users a, trips b where a.userPk=${e.reqPk} and b.tripId=${e.tripId}`,
                         function (err, result) {
                           console.log(result);
                           //   let promisList = Object.values(
@@ -94,6 +94,9 @@ router.get("/:userPk", async (req, res) => {
                           //   );
                         }
                       );
+                    }
+                    // 나에게 가이드를 해달라 신청
+                    else {
                     }
                   }
                 });

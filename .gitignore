@@ -1,5 +1,6 @@
 node_modules
 .prettierrc.js
 .env
-.gitignore
 test/t.js
+routes/.bash_history
+.gitignore

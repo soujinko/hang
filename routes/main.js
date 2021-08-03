@@ -125,7 +125,7 @@ export default router;
 // let user = "select id from users where nickname='고수진' or nickname='말랑'";
 
 // let findUser =
-// "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('콜라', 'cola', '서면', '부산','10', 0 )";
+// "INSERT INTO users (nickname, userId, region, city, age, gender, guide ) VALUES ('콜라', 'cola', '서면', '부산','10', 2, 0 )";
 // let trip =
 // "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (4,'서초구', '서울','2021-08-01', '2021-08-23','기대된당!' )";
 // let request =
@@ -134,7 +134,7 @@ export default router;
 
 // let trip =
 //   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (4,'서초구', '서울','2021-08-12', '2021-08-25','조앙조앙!!')";
-//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, partner) VALUES (1,'서초구', '서울','2021-08-02', '2021-08-05','기대된당', 2)";
+//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, partner) VALUES (1,'서초구', '서울','2021-08-02', '2021-08-05','기대된당', 3)";
 // let finduser =
 //   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('우라232', '우라232', '서초구', '서울','20', 1 )";
 // 확정 약속 가져오기

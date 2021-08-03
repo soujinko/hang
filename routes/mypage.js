@@ -80,24 +80,37 @@ router.get("/:userPk", async (req, res) => {
                 let promisList = Object.values(
                   JSON.parse(JSON.stringify(result))
                 );
+                console.log("내 약속 리스트!", promisList, userPk);
                 promisList.forEach((e) => {
                   // 내가 받은 요청
                   if ((e.recPk = userPk)) {
+                    conn.query(
+                      `select a.*, b.* from users a, trips b where a.userPk=${e.reqPk} and b.tripId=${e.tripId}`,
+                      function (err, result) {
+                        console.log("내가받은 요청!", result);
+                        //   let promisList = Object.values(
+                        //     JSON.parse(JSON.stringify(result))
+                        //   );
+                      }
+                    );
                     // 나에게 누가 가이드가 되어주겠다 신청
-                    if (myTripLists.includes(e.tripId)) {
-                      conn.query(
-                        `select a.*, b.* from users a, trips b where a.userPk=${e.reqPk} and b.tripId=${e.tripId}`,
-                        function (err, result) {
-                          console.log(result);
-                          //   let promisList = Object.values(
-                          //     JSON.parse(JSON.stringify(result))
-                          //   );
-                        }
-                      );
-                    }
-                    // 나에게 가이드를 해달라 신청
-                    else {
-                    }
+                    // if (myTripLists.includes(e.tripId)) {
+                    // }
+                    // // 나에게 가이드를 해달라 신청
+                    // else {
+                    // }
+                  }
+                  //   내가 한 요청
+                  else if ((e.reqPk = userPk)) {
+                    conn.query(
+                      `select a.*, b.* from users a, trips b where a.userPk=${e.recPk} and b.tripId=${e.tripId}`,
+                      function (err, result) {
+                        console.log("내가한 요청!", result);
+                        //   let promisList = Object.values(
+                        //     JSON.parse(JSON.stringify(result))
+                        //   );
+                      }
+                    );
                   }
                 });
                 console.log(promisList);

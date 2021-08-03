@@ -1,7 +1,7 @@
 paths:
   /api/main/:
     get:
-      summary: get user info
+      summary: Get user info
       tags: [Main Page]
       description: GET main page
       responses:

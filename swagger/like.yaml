@@ -1,7 +1,7 @@
 paths:
   /api/like:
     get:
-      summary: get list of like users
+      summary: Get list of like users
       tags: [Like]
       description: GET like
       responses:
@@ -46,7 +46,7 @@ paths:
         500:
           description: internal server errors
     post:
-      summary: add liked user
+      summary: Add liked user
       tags: [Like]
       description: POST liked user
       
@@ -70,7 +70,7 @@ paths:
             targetPk: 1
       
     delete:
-      summary: delete liked user
+      summary: Cancel like
       tags: [Like]
       description: DELETE liked user
       

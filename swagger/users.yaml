@@ -1,5 +1,26 @@
 paths:
   /api/users:
+    get:
+      summary: Get user's basic profile
+      tags: [Users]
+      description: GET Profile
+      responses:
+        200:
+          description: Success
+          schema:
+            type: object
+            properties:
+              userPk:
+                type: number
+              nickname:
+                type: string
+              profileImg:
+                type: string
+            example:
+              userPk: 1
+              nickname: kingsujin
+              profileImg: random/url/path
+
     post:
       summary: Registration
       tags: [Users]
@@ -112,6 +133,13 @@ paths:
                 region: 경기도
                 city: 하남
                 profileImg: random/url/path
+    
+
+        400:
+          description: Cannot find user's
+        500:
+          description: Internal server error
+     
 
   /api/users/signin:
     post:
@@ -155,4 +183,100 @@ paths:
               example:
                 userId: randID123
                 password: randPW123
+  
+  /api/users/sms_auth:
+    post:
+      summary: SMS service for authentication
+      tags: [Users]
+      description: POST SMS
+      responses:
+        200:
+          description: User will get text message with random number length of 5
+        409:
+          description: User's phone number already exists
+        500:
+          description: Internal server error
+      parameters:
+        - name: pNum
+          in: formData
+          description: User's phone number
+          type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pNum:
+                  type: string
+              example:
+                pNum: '01077778888'
+  
+  /api/users/p_auth:
+    post:
+      summary: Authentication after user received authentication message
+      tags: [Users]
+      description: POST Authentication
+      responses:
+        200:
+          description: Valid (phone number, authentication number, period(1m))
+        401:
+          description: Invalid (Any of or all of values do NOT meet the conditions)
+        500:
+          description: Internal server error
+      parameters:
+        - name: pNum
+          in: formData
+          description: User's phone number
+          type: string
+          required: true
+        - name: aNum
+          in: formData
+          description: number that received for authentication
+          type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pNum:
+                  type: string
+                aNum:
+                  type: number
+              example:
+                pNum: '01077778888'
+                aNum: 55112
+  /api/users/duplicate:
+    post:
+      summary: Check if user sending duplicate ID or nickname
+      tags: [Users]
+      description: POST Duplicate check
+      responses:
+        200:
+          description: Valid (ID or nickname does not matched to any other users)
+        401:
+          description: Invalid (duplicate error)
+        500:
+          description: Internal server error
+      parameters:
+        - name: userId or nickname
+          in: formData
+          description: User's ID or nickname
+          type: string
+          required: true
+        
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+          
+              
+        
 

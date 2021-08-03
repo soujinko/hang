@@ -166,14 +166,18 @@ router.post("/", (req, res, next) => {
           profileImg,
           gender,
           pNum,
-        ]
+        ], (err, data) => {
+          if (err) {
+            conn.rollback()
+            next(err)
+          } else {
+            conn.commit();
+            res.sendStatus(201);
+          }
+        }
       );
-
-      conn.commit();
-      res.sendStatus(201);
     } catch (err) {
       conn.rollback();
-      err.status = 500;
       next(err);
     } finally {
       conn.release();

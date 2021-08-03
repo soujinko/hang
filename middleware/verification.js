@@ -24,7 +24,7 @@ const verification = async (req, res, next) => {
             // 새 refresh
             conn.query(`UPDATE users SET refreshToken='${refreshToken}' WHERE userPk=${user.userPk}`)
             conn.commit()
-            res.cookie('refresh', refreshToken, { httpOnly:true })
+            res.cookie('refresh', refreshToken, { httpOnly:true, sameSite:'none', secure:true })
           }
           next()
         })
@@ -41,7 +41,7 @@ const verification = async (req, res, next) => {
     } catch {
        // refresh가 verify에서 실패한 상황. 재발급 해서 쿠키로 보내주고 DB 저장
       const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {expiresIn:'7d', algorithm:'HS512'})
-      res.cookie('refresh', refreshToken, { httpOnly: true })
+      res.cookie('refresh', refreshToken, { httpOnly:true, sameSite:'none', secure:true })
       getConnection((conn)=>{
         try{
           conn.beginTransaction();
@@ -85,7 +85,7 @@ const verification = async (req, res, next) => {
 					process.env.PRIVATE_KEY,
 					{ expiresIn: '3h', algorithm: 'HS512' }
 				);
-      res.cookie('jwt', newAccessToken, { httpOnly: true })
+      res.cookie('jwt', newAccessToken, { httpOnly:true, sameSite:'none', secure:true  })
       res.locals.user = expiredUser
       next()
       

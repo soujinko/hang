@@ -20,6 +20,10 @@ paths:
               userPk: 1
               nickname: kingsujin
               profileImg: random/url/path
+        400:
+          description: Cannot find user
+        500:
+          description: Internal server error
 
     post:
       summary: Registration
@@ -65,8 +69,18 @@ paths:
                 - 20
                 - 30
                 - 40
-              default: 20
-        
+        - name: gender
+          in: formData
+          description: user's gender
+          type: boolean
+          required: true
+
+        - name: pNum
+          in: formData
+          description: user's phone number
+          type: string
+          required: true
+
         - name: region
           in: formData
           description: province that user lives in
@@ -97,7 +111,6 @@ paths:
                 - 창원시
                 - 제주시
                 - 서귀포시
-              default: 서울시
         
         - name: profileImg
           in: formData
@@ -133,12 +146,6 @@ paths:
                 region: 경기도
                 city: 하남
                 profileImg: random/url/path
-    
-
-        400:
-          description: Cannot find user's
-        500:
-          description: Internal server error
      
 
   /api/users/signin:
@@ -249,6 +256,7 @@ paths:
               example:
                 pNum: '01077778888'
                 aNum: 55112
+  
   /api/users/duplicate:
     post:
       summary: Check if user sending duplicate ID or nickname
@@ -276,7 +284,17 @@ paths:
               properties:
                 userId:
                   type: string
-          
-              
+  
+  /api/users/signout:
+    delete:
+      summary: Sign-out (delete cookies)
+      tags: [Users]
+      description: DELETE Sign-out
+      responses:
+        204:
+          description: Signed-out
+        500:
+          description: Internal server error
+       
         
 

@@ -1,7 +1,7 @@
 paths:
   /api/user/{userPk}:
     get:
-      summary: get user info
+      summary: Get user info
       tags: [User Details]
       description: GET user
       responses:

@@ -35,7 +35,7 @@ app.use(passport.initialize());
 passportConfig();
 
 app.get("/", (req, res, next) => {
-  console.log("쿠리쿠리", req.cookies);
+  console.log("쿠키", req.cookies);
   res.send("hello world");
 });
 app.use("/api", router);

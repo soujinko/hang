@@ -20,9 +20,7 @@ const localVerify = (userId, password, done) => {
 				`SELECT * FROM users WHERE userId = '${userId}'`,
 				function (err, user) {
 					 conn.release()
-					
 					if (err) throw err;
-					
 					if (user.length < 1)
 						return done(null, false, {
 							message: 'ID or password invalid',
@@ -32,9 +30,7 @@ const localVerify = (userId, password, done) => {
 					const hashedPassword = crypto.pbkdf2Sync(password, salt, Number(process.env.ITERATION_NUM), 64,'SHA512').toString('base64');
 
 					if (storedPassword !== hashedPassword) {
-						return done(null, false, {
-							message: 'ID or password invalid',
-						});
+						return done(null, false, {message: 'ID or password invalid',});
 					} else {
 						return done(null, user[0], { message: 'Success' });
 					}

@@ -7,7 +7,7 @@ const config = {
   password: process.env.DB_PASSWORD,
   database: "hang",
   connectionLimit: 10,
-  // debug: true,
+  debug: 0
 };
 
 export default config;

@@ -11,6 +11,7 @@ import http from 'http';
 import passport from 'passport';
 import passportConfig from './passport/passport.js'
 import swaggerDocs from './config/swagger_config.js'
+import DBCleaner from './util/db_cleaner.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -31,8 +32,9 @@ app.use(express.json()); // body-parser 기능 포함
 app.use(express.urlencoded({ extended: false }));
 // app.use(csrfProtection({ cookie: true })); // csrfProtection은 cookieparser나 session미들웨어보다 밑에 있어야한다.
 app.use(passport.initialize());
-passportConfig()
+passportConfig();
 
+DBCleaner();
 
 app.use('/api', router);
 app.use('/docs', swaggerDocs)

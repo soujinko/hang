@@ -27,6 +27,8 @@ router.get('/', verification, (req, res, next) => {
 			})
 		} catch(err){
 			next(err)
+		} finally {
+			conn.release();
 		}
 	})
 })
@@ -47,12 +49,12 @@ router.post('/sms_auth', (req, res, next) => {
 			
 			conn.query(`INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`)
 			conn.commit();
-			conn.release();
 			res.sendStatus(200)
 		} catch(err) {
 			conn.rollback();
-			conn.release();
 			next(err);
+		} finally {
+			conn.release();
 		}
 	})
 })
@@ -72,13 +74,12 @@ router.post('/p_auth', (req, res, next) => {
 						conn.commit();
 						res.sendStatus(200)
 				} else res.sendStatus(401)
-				
-				conn.release()
 			})
 		} catch(err) {
 			conn.rollback();
-			conn.release();
 			next(err)
+		} finally {
+			conn.release()
 		}
 	})
 })
@@ -91,10 +92,8 @@ router.post('/duplicate', (req, res, next) => {
 			conn.beginTransaction();
 			conn.query(sequel, function (err, data) {
 				if (err) {
-					conn.release()
 					throw err
 				} else if (data.length > 0) {
-					conn.release()
 					throw new Error({ status : 409 })
 				} else {
 					res.sendStatus(200)
@@ -102,6 +101,8 @@ router.post('/duplicate', (req, res, next) => {
 			})
 		} catch(err) {
 			next(err)
+		} finally {
+			conn.release();
 		}
 	})
 })
@@ -114,16 +115,16 @@ router.post('/', (req, res, next)=>{
 
 			const salt = crypto.randomBytes(64).toString('base64');
 			const hashedPassword = crypto.pbkdf2Sync(password, salt, Number(process.env.ITERATION_NUM), 64, 'SHA512').toString('base64');
-			
+			// insert가 안됐는데도 201반환하는 문제 해결해야함
 			conn.query(
 				`INSERT INTO
          users(nickname, userId, password, salt, region, city, age, profileImg, gender, pNum)
          VALUES(?,?,?,?,?,?,?,?,?,?)`,
-				[nickname, userId, hashedPassword, salt, age, region, city, profileImg, gender, pNum]
+				[nickname, userId, hashedPassword, salt, region, city, age, profileImg, gender, pNum]
 			);
-
 			conn.commit();
 			res.sendStatus(201)
+
 		} catch (err) {
 			conn.rollback();
 			err.status = 500;
@@ -181,6 +182,5 @@ router.get('/a', verification, (req, res) => {
 router.get('/b', asyncHandle(async (req, res, next) => {
 		throw new Error('사용자 정의 에러 발생')
 }))
-
 
 export default router;

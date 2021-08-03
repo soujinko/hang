@@ -8,7 +8,7 @@ const config = {
   password: "rhtnwls1541!",
   database: "hang",
   connectionLimit: 30,
-  debug: true,
+  // debug: true,
 };
 
 export default config;

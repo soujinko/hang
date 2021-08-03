@@ -6,7 +6,7 @@ dotenv.config()
 
 const verification = async (req, res, next) => {
   // 토큰 자체가 없는 경우
-  if (!req.cookies?.jwt) return res.status(401).json({message:'로그인이 필요한 서비스입니다.'})
+  if (!req.cookies?.jwt) return res.status(401).json({message:'로그인이 필요한 서비스입니다!'})
   // jwt verify가 성공할 경우 refresh check
   try{
     const user = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {algorithms:['HS512']})

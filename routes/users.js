@@ -37,34 +37,34 @@ router.get("/", verification, (req, res, next) => {
 });
 
 router.post("/sms_auth", (req, res, next) => {
-  //   const { pNum: phoneNumber } = req.body;
-  //   getConnection((conn) => {
-  //     try {
-  //       conn.beginTransaction();
-  //       conn.query(
-  //         `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
-  //         (err, data) => {
-  //           if (err) throw err;
-  //           if (data.length > 0) return res.sendStatus(409);
-  //         }
-  //       );
-  //       conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
+    const { pNum: phoneNumber } = req.body;
+    getConnection((conn) => {
+      try {
+        conn.beginTransaction();
+        conn.query(
+          `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
+          (err, data) => {
+            if (err) throw err;
+            if (data.length > 0) return res.sendStatus(409);
+          }
+        );
+        conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
 
-  //       const authNumber = Math.floor(Math.random() * 90000) + 10000;
-  //       NC_SMS(req, next, authNumber);
+        const authNumber = Math.floor(Math.random() * 90000) + 10000;
+        NC_SMS(req, next, authNumber);
 
-  //       conn.query(
-  //         `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
-  //       );
-  //       conn.commit();
-  //       conn.release();
+        conn.query(
+          `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
+        );
+        conn.commit();
   res.sendStatus(200);
-  //     } catch (err) {
-  //       conn.rollback();
-  //       conn.release();
-  //       next(err);
-  //     }
-  //   });
+      } catch (err) {
+        conn.rollback();
+        next(err);
+      } finally {
+        conn.release();
+      }
+    });
 });
 
 router.post("/p_auth", (req, res, next) => {
@@ -88,14 +88,13 @@ router.post("/p_auth", (req, res, next) => {
             conn.commit();
             res.sendStatus(200);
           } else res.sendStatus(401);
-
-          conn.release();
         }
       );
     } catch (err) {
       conn.rollback();
-      conn.release();
       next(err);
+    } finally {
+      conn.release();
     }
   });
 });
@@ -110,10 +109,8 @@ router.post("/duplicate", (req, res, next) => {
       conn.beginTransaction();
       conn.query(sequel, function (err, data) {
         if (err) {
-          conn.release();
           throw err;
         } else if (data.length > 0) {
-          conn.release();
           throw new Error({ status: 409 });
         } else {
           res.sendStatus(200);
@@ -121,6 +118,8 @@ router.post("/duplicate", (req, res, next) => {
       });
     } catch (err) {
       next(err);
+    } finally {
+      conn.release();
     }
   });
 });
@@ -234,6 +233,16 @@ router.post("/signin", (req, res, next) => {
     next(err);
   }
 });
+
+router.delete('/signout', verification, (req, res, next)=>{
+  try {
+    res.clearCookie('jwt')
+    res.clearCookie('refresh')
+    res.sendStatus(204)
+  }catch(err){
+    next(err)
+  }
+})
 
 router.get("/a", verification, (req, res) => {
   res.send("true");

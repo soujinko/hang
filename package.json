@@ -12,6 +12,7 @@
   "type": "module",
   "dependencies": {
     "@babel/core": "^7.14.8",
+    "async": "^3.2.0",
     "cookie-parser": "^1.4.5",
     "cors": "^2.8.5",
     "csurf": "^1.11.0",

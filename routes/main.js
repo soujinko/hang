@@ -127,9 +127,9 @@ export default router;
 // let findUser =
 // "INSERT INTO users (nickname, userId, region, city, age, gender, guide ) VALUES ('콜라', 'cola', '서면', '부산','10', 2, 0 )";
 // let trip =
-// "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (4,'서초구', '서울','2021-08-01', '2021-08-23','기대된당!' )";
+// "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (2,'제주', '서귀포','2021-09-10', '2021-09-15','가자가자' )";
 // let request =
-// "INSERT INTO requests (tripId, reqPk, recPk) VALUES ( 3, 4, 1)";
+// "INSERT INTO requests (tripId, reqPk,recPk) VALUES ( 3, 3, 1)";
 // let alarm = "INSERT INTO alarms (requestId) VALUES (1)";
 
 // let trip =

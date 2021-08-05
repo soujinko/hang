@@ -2,6 +2,8 @@ import express from "express";
 import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
 
+const router = express.Router()
+
 // 내 프로필, 여행 일정, 확정 약속 불러오기
 router.get("/", async (req, res, next) => {
   getConnection(async (conn) => {

@@ -49,7 +49,7 @@ app.use(errorHandlers);
 
 const server = http.createServer(app);
 
-server.listen(5000, () => {
+server.listen(3000, () => {
   console.log("서버 연결 성공");
 });
 // https.createServer(options, app).listen(443);

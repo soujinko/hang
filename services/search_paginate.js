@@ -58,5 +58,5 @@ const searchAndPaginate = async (req, userPk, next) => {
   }
 }
 
-export default search;
+export default searchAndPaginate;
 

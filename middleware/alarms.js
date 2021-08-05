@@ -1,4 +1,4 @@
-import { getConnection } from '../models/db';
+import { getConnection } from '../models/db.js';
 
 const alarms = (req, res, next) => {
   const { userPk } = res.locals.user;

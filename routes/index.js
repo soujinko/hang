@@ -6,13 +6,15 @@ import userRouter from "./user.js";
 import mypageRouter from "./mypage.js";
 import guideRouter from "./guide.js";
 import travelerRouter from "./traveler.js";
+import verification from "../middleware/verification.js";
+import alarms from "../middleware/alarms.js";
 
 const router = express.Router();
 
 router.use("/users", usersRouter);
 
-// router.use(verification())
-// router.use(alarms());
+router.use(verification);
+router.use(alarms);
 
 router.use("/main", mainRouter);
 router.use("/like", likeRouter);

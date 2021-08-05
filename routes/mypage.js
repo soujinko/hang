@@ -193,13 +193,12 @@ router.post("/create_trip", async (req, res, next) => {
     let endNewDate = Date.parse(endDate);
     let today = new Date();
     today = today.toISOString().slice(0, 10);
+
     // 끝날이 시작날보다 전 이거나, 오늘 날짜보다 시작날이 작다면 error
     if (startNewDate > endNewDate) {
-      console.log("날짜 잘못 선택");
       throw new Error();
     }
     if (startNewDate < Date.parse(today)) {
-      console.log("오늘보다 크게 해라");
       throw new Error();
     }
 
@@ -217,7 +216,7 @@ router.post("/create_trip", async (req, res, next) => {
     myTripDates.forEach((e) => {
       let startOld = Date.parse(e[0]);
       let endOld = Date.parse(e[1]);
-      if (startNewDate >= startOld && endNewDate <= endOld) {
+      if (startNewDate >= startOld && startNewDate <= endOld) {
         throw new Error();
       } else if (endNewDate >= startOld && endNewDate <= endOld) {
         throw new Error();

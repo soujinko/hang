@@ -3,13 +3,14 @@ import { getConnection } from "../models/db.js";
 
 const router = express.Router();
 
-router.get("/:pagePk", async (req, res) => {
+router.get("/:pagePk", async (req, res, next) => {
   getConnection(async (conn) => {
     try {
       conn.beginTransaction();
       let userInfo;
       let tripInfo;
       const { userPk } = res.locals.user;
+      // const userPk = 2;
       const { pagePk } = req.params;
       const finduser = `select * from userView where userPk ='${pagePk}'`;
       // 해당 페이지 유저의 프로필 정보 가져오기

@@ -4,15 +4,15 @@ import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
 
 // 내 프로필, 여행 일정, 확정 약속 불러오기
-router.get("/:userPk", async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   getConnection(async (conn) => {
     conn.beginTransaction();
     try {
       let userInfo;
       let tripInfo;
       let confirmed = [];
-      //   const { userPk } = res.locals.user;
-      const { userPk } = req.params;
+      const { userPk } = res.locals.user;
+      // const { userPk } = req.params;
       const finduser = `select * from userView where userPk ='${userPk}'`;
       //유저의 프로필 정보 가져오기
       conn.query(finduser, function (err, result) {
@@ -96,10 +96,12 @@ router.get("/:userPk", async (req, res, next) => {
 });
 
 // 나의 약속 불러오기 (미확정)
-router.get("/promise/:userPk", async (req, res, next) => {
+router.get("/promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    const { userPk } = req.params;
+    // const { userPk } = req.params;
+    const { userPk } = res.locals.user;
+
     let requested = [];
     let received = [];
     const reqList = JSON.parse(
@@ -179,12 +181,14 @@ router.get("/promise/:userPk", async (req, res, next) => {
 });
 
 // 여행 등록하기
-router.post("/create_trip/:userPk", async (req, res, next) => {
+router.post("/create_trip", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    const { userPk } = req.params;
+    // const { userPk } = req.params;
+    const { userPk } = res.locals.user;
+
     const { region, city, startDate, endDate, tripInfo } = req.body;
-    let saveMyTrip = `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`;
+    // let saveMyTrip = `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`;
     let startNewDate = Date.parse(startDate);
     let endNewDate = Date.parse(endDate);
     let today = new Date();
@@ -255,8 +259,8 @@ router.post("/create_trip/:userPk", async (req, res, next) => {
 router.delete("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { tripId, userPk } = req.body;
+    const { userPk } = res.locals.user;
+    const { tripId } = req.body;
 
     //나의 여행 삭제하기
     const result = await connection.query(
@@ -282,8 +286,8 @@ router.delete("/", async (req, res, next) => {
 router.patch("/update_guide", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk } = req.body;
+    const { userPk } = res.locals.user;
+    // const { userPk } = req.body;
     let setGuide;
     let guideState = JSON.parse(
       JSON.stringify(
@@ -319,8 +323,8 @@ router.patch("/update_guide", async (req, res, next) => {
 router.patch("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk, nickname, profileImg, age, region, city, intro } = req.body;
+    const { userPk } = res.locals.user;
+    const { nickname, profileImg, age, region, city, intro } = req.body;
 
     // 내 프로필 정보 업데이트하기
     const result = await connection.query(
@@ -346,8 +350,8 @@ router.patch("/", async (req, res, next) => {
 router.patch("/reject_request", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk, requestId } = req.body;
+    const { userPk } = res.locals.user;
+    const { requestId } = req.body;
 
     // 해당 리퀘스트 상태 변경하기
     const result = await connection.query(
@@ -373,8 +377,8 @@ router.patch("/reject_request", async (req, res, next) => {
 router.patch("/reject_confirm", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk, tripId } = req.body;
+    const { userPk } = res.locals.user;
+    const { tripId } = req.body;
 
     // 해당 여행정보에서 파트너 없애기
     const result = await connection.query(
@@ -400,8 +404,8 @@ router.patch("/reject_confirm", async (req, res, next) => {
 router.post("/make_promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk, tripId, requestId } = req.body;
+    const { userPk } = res.locals.user;
+    const { tripId, requestId } = req.body;
     let setPartner;
 
     // 해당 여행의 주인 pk

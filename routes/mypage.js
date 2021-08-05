@@ -1,7 +1,7 @@
 import express from "express";
 import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
-
+const router = express.Router();
 // 내 프로필, 여행 일정, 확정 약속 불러오기
 router.get("/", async (req, res, next) => {
   getConnection(async (conn) => {
@@ -322,11 +322,11 @@ router.patch("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
-    const { nickname, profileImg, age, region, city, intro } = req.body;
+    const { nickname, profileImg, region, city, intro } = req.body;
 
     // 내 프로필 정보 업데이트하기
     const result = await connection.query(
-      `UPDATE users set nickname='${nickname}',profileImg='${profileImg}',age='${age}',region='${region}',city='${city}',intro='${intro}' where userPk=${userPk}`
+      `UPDATE users set nickname='${nickname}',profileImg='${profileImg}',region='${region}',city='${city}',intro='${intro}' where userPk=${userPk}`
     );
     if (result[0].affectedRows === 0) {
       throw new Error();
@@ -402,8 +402,8 @@ router.patch("/reject_confirm", async (req, res, next) => {
 router.post("/make_promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    const { userPk } = res.locals.user;
-    const { tripId, requestId } = req.body;
+    // const { userPk } = res.locals.user;
+    const { tripId, requestId, userPk } = req.body;
     let setPartner;
 
     // 해당 여행의 주인 pk
@@ -423,6 +423,9 @@ router.post("/make_promise", async (req, res, next) => {
       )
     )[0][0];
     console.log(ownerPk, getPks.reqPk, getPks.recPk, getPks);
+    if (userPk !== getPks.reqPk && userPk !== getPks.recPk) {
+      throw new Error("나와 관련된 약속이 아닙니다");
+    }
 
     // 파트너로 등록할 pk 설정
     if (ownerPk === getPks.reqPk) {

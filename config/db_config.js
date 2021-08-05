@@ -5,7 +5,7 @@ dotenv.config();
 const config = {
   host: "localhost",
   user: "root",
-  password: process.env.DB_PASSWORD,
+  password: "rhtnwls1541!",
   database: "hang",
   connectionLimit: 30,
   // debug: true,

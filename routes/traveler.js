@@ -74,27 +74,47 @@ router.post("/", async (req, res, next) => {
           `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=${userPk} or partner=${userPk}`
         )
       )
-    )[0].map((e) => [e["left(startDate, 10)"], e["left(endDate, 10)"]]);
-    console.log("userTripDates", userTripDates);
+    )[0];
+    // 나의 확정 약속 및 여행일정이 있으면 날짜 겹치는지 확인 하고 리퀘스트 저장
+    if (userTripDates.length > 0) {
+      const userTripDates2 = userTripDates.map((e) => [
+        e["left(startDate, 10)"],
+        e["left(endDate, 10)"],
+      ]);
+      console.log("userTripDates2", userTripDates2);
 
-    let count = 0;
-    userTripDates.forEach((e) => {
-      let startOld = Date.parse(e[0]);
-      let endOld = Date.parse(e[1]);
-      if (startMyDate >= startOld && startMyDate <= endOld) {
-        throw new Error("해당 날짜에 이미 약속이 있어요");
-      } else if (endMyDate >= startOld && endMyDate <= endOld) {
-        throw new Error("해당 날짜에 이미 약속이 있어요");
-      } else if (startMyDate <= startOld && endMyDate >= endOld) {
-        throw new Error("해당 날짜에 이미 약속이 있어요");
+      let count = 0;
+      userTripDates2.forEach((e) => {
+        let startOld = Date.parse(e[0]);
+        let endOld = Date.parse(e[1]);
+        if (startMyDate >= startOld && startMyDate <= endOld) {
+          throw new Error("해당 날짜에 이미 약속이 있어요");
+        } else if (endMyDate >= startOld && endMyDate <= endOld) {
+          throw new Error("해당 날짜에 이미 약속이 있어요");
+        } else if (startMyDate <= startOld && endMyDate >= endOld) {
+          throw new Error("해당 날짜에 이미 약속이 있어요");
+        } else {
+          count += 1;
+          console.log("count", count);
+        }
+      });
+      // 리퀘스트 등록하기
+      if (count === userTripDates.length) {
+        const result = await connection.query(
+          `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
+        );
+        if (result[0].affectedRows === 0) {
+          throw new Error();
+        } else {
+          await connection.commit();
+          res.status(201).send();
+        }
       } else {
-        count += 1;
-        console.log("count", count);
+        throw new Error();
       }
-    });
-
-    // 리퀘스트 등록하기
-    if (count === userTripDates.length) {
+    }
+    // 없으면 그냥 저장
+    else {
       const result = await connection.query(
         `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
       );

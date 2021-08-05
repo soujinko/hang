@@ -37,34 +37,35 @@ router.get("/", verification, (req, res, next) => {
 });
 
 router.post("/sms_auth", (req, res, next) => {
-  //   const { pNum: phoneNumber } = req.body;
-  //   getConnection((conn) => {
-  //     try {
-  //       conn.beginTransaction();
-  //       conn.query(
-  //         `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
-  //         (err, data) => {
-  //           if (err) throw err;
-  //           if (data.length > 0) return res.sendStatus(409);
-  //         }
-  //       );
-  //       conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
+    const { pNum: phoneNumber } = req.body;
+    getConnection((conn) => {
+      try {
+        conn.beginTransaction();
+        conn.query(
+          `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
+          (err, data) => {
+            if (err) throw err;
+            if (data.length > 0) return res.sendStatus(409);
+            // conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
 
-  //       const authNumber = Math.floor(Math.random() * 90000) + 10000;
-  //       NC_SMS(req, next, authNumber);
+            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
+            // NC_SMS(req, next, authNumber);
 
-  //       conn.query(
-  //         `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
-  //       );
-  //       conn.commit();
-  //       conn.release();
-  res.sendStatus(200);
-  //     } catch (err) {
-  //       conn.rollback();
-  //       conn.release();
-  //       next(err);
-  //     }
-  //   });
+            // conn.query(
+            //   `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
+            // );
+            // conn.commit();
+            res.sendStatus(200);
+          } 
+        );
+        
+      } catch (err) {
+        conn.rollback();
+        next(err);
+      } finally {
+        conn.release();
+      }
+    });
 });
 
 router.post("/p_auth", (req, res, next) => {
@@ -88,14 +89,13 @@ router.post("/p_auth", (req, res, next) => {
             conn.commit();
             res.sendStatus(200);
           } else res.sendStatus(401);
-
-          conn.release();
         }
       );
     } catch (err) {
       conn.rollback();
-      conn.release();
       next(err);
+    } finally {
+      conn.release();
     }
   });
 });
@@ -105,15 +105,13 @@ router.post("/duplicate", (req, res, next) => {
   const sequel = userId
     ? `SELECT userPk FROM users WHERE userId='${userId}'`
     : `SELECT userPk FROM users WHERE nickname='${nickname}'`;
-  getConnection(async (conn) => {
+  getConnection((conn) => {
     try {
       conn.beginTransaction();
       conn.query(sequel, function (err, data) {
         if (err) {
-          conn.release();
           throw err;
         } else if (data.length > 0) {
-          conn.release();
           throw new Error({ status: 409 });
         } else {
           res.sendStatus(200);
@@ -121,6 +119,8 @@ router.post("/duplicate", (req, res, next) => {
       });
     } catch (err) {
       next(err);
+    } finally {
+      conn.release();
     }
   });
 });
@@ -167,14 +167,18 @@ router.post("/", (req, res, next) => {
           profileImg,
           gender,
           pNum,
-        ]
+        ], (err, data) => {
+          if (err) {
+            conn.rollback()
+            next(err)
+          } else {
+            conn.commit();
+            res.sendStatus(201);
+          }
+        }
       );
-
-      conn.commit();
-      res.sendStatus(201);
     } catch (err) {
       conn.rollback();
-      err.status = 500;
       next(err);
     } finally {
       conn.release();
@@ -216,18 +220,19 @@ router.post("/signin", (req, res, next) => {
             conn.release();
           }
         });
-
-        res.cookie("jwt", accessToken, {
-          httpOnly: true,
+        
+        res.status(200)
+        .cookie("jwt", accessToken, {
+          httpOnly:true,
           sameSite: "none",
           secure: true,
-        });
-        res.cookie("refresh", refreshToken, {
-          httpOnly: true,
+        })
+        .cookie("refresh", refreshToken, {
+          httpOnly:true,
           sameSite: "none",
           secure: true,
-        });
-        res.sendStatus(200);
+        })
+        .json({accessToken});
       });
     })(req, res);
   } catch {
@@ -235,13 +240,21 @@ router.post("/signin", (req, res, next) => {
   }
 });
 
+router.delete('/signout', verification, (req, res, next)=>{
+  try {
+    res.status(204)
+    .clearCookie('jwt',{ httpOnly:true, secure:true, sameSite:'none'})
+    .clearCookie('refresh',{ httpOnly:true, secure:true, sameSite:'none'})
+  }catch(err){
+    next(err)
+  }
+})
+
 router.get("/a", verification, (req, res) => {
-  res.send("true");
+  res.status(200).json({status:true})
 });
 
-router.get(
-  "/b",
-  asyncHandle(async (req, res, next) => {
+router.get("/b", asyncHandle(async (req, res, next) => {
     throw new Error("사용자 정의 에러 발생");
   })
 );

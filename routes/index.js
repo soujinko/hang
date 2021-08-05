@@ -7,10 +7,15 @@ import mypageRouter from "./mypage.js";
 import guideRouter from "./guide.js";
 
 const router = express.Router();
+
+router.use("/users", usersRouter);
+
+router.use(verification())
+router.use(alarms())
+
 router.use("/main", mainRouter);
 router.use("/like", likeRouter);
 router.use("/user", userRouter);
-router.use("/users", usersRouter);
 router.use("/mypage", mypageRouter);
 router.use("/guide", guideRouter);
 

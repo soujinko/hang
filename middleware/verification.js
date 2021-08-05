@@ -6,7 +6,8 @@ dotenv.config()
 
 const verification = async (req, res, next) => {
   // 토큰 자체가 없는 경우
-  if (!req.cookies?.jwt) return res.status(401).json({message:'로그인이 필요한 서비스입니다.'})
+  
+  if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)
   // jwt verify가 성공할 경우 refresh check
   try{
     const user = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {algorithms:['HS512']})
@@ -24,7 +25,7 @@ const verification = async (req, res, next) => {
             // 새 refresh
             conn.query(`UPDATE users SET refreshToken='${refreshToken}' WHERE userPk=${user.userPk}`)
             conn.commit()
-            res.cookie('refresh', refreshToken, { httpOnly:true })
+            res.cookie('refresh', refreshToken, { httpOnly:true, sameSite:'none', secure:true })
           }
           next()
         })
@@ -41,7 +42,7 @@ const verification = async (req, res, next) => {
     } catch {
        // refresh가 verify에서 실패한 상황. 재발급 해서 쿠키로 보내주고 DB 저장
       const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {expiresIn:'7d', algorithm:'HS512'})
-      res.cookie('refresh', refreshToken, { httpOnly: true })
+      res.cookie('refresh', refreshToken, { httpOnly:true, sameSite:'none', secure:true })
       getConnection((conn)=>{
         try{
           conn.beginTransaction();
@@ -85,7 +86,7 @@ const verification = async (req, res, next) => {
 					process.env.PRIVATE_KEY,
 					{ expiresIn: '3h', algorithm: 'HS512' }
 				);
-      res.cookie('jwt', newAccessToken, { httpOnly: true })
+      res.cookie('jwt', newAccessToken, { httpOnly:true, sameSite:'none', secure:true  })
       res.locals.user = expiredUser
       next()
       
@@ -93,7 +94,7 @@ const verification = async (req, res, next) => {
       // 1.jwt와 refresh가 모두 expired되었거나, 
       // 2.jwt가 무효하고 refresh가 변형이 되었거나,
       // 3.jwt가 expired되었을 뿐 아니라 변형 되었을 경우, refresh의 유효성에 상관없이 새로 로그인
-      return res.status(401).json({message:'로그인이 필요한 서비스입니다.'})
+      return res.sendStatus(401)
     }
   }
 }

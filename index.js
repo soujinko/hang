@@ -36,9 +36,6 @@ app.use(passport.initialize());
 passportConfig();
 DBCleaner();
 
-app.get("/", (req, res, next) => {
-  res.send("helloworld");
-});
 app.use("/api", router);
 app.use("/docs", swaggerDocs);
 app.use(errorHandlers);

@@ -33,6 +33,8 @@ paths:
                         type: string
                       like:
                         type: boolean
+                      intro:
+                        type: string
                     example:
                       userPk: 3
                       nickname: kingsujin
@@ -43,7 +45,7 @@ paths:
                       guide: 1
                       profileImg: random/url/path
                       like: 0
-
+                      intro: 안녕? 나는 여행을 좋아해!
                   tripInfo:
                     type: array
                     items:

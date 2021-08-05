@@ -1,6 +1,7 @@
 import express from "express";
-const router = express.Router();
 import { getConnection } from "../models/db.js";
+
+const router = express.Router();
 
 router.get("/:userPk", async (req, res) => {
   getConnection(async (conn) => {

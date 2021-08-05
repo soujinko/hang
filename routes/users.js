@@ -228,7 +228,7 @@ router.post("/signin", (req, res, next) => {
           secure: true,
         })
         .cookie("refresh", refreshToken, {
-          httpOnly:true, 
+          httpOnly:true,
           sameSite: "none",
           secure: true,
         })

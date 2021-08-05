@@ -4,11 +4,11 @@ import { connection } from '../models/db.js';
  * For faster query, we applied:
  * 
  * 1. Full-Text-Search
- * 2. Late Row Lookup (to get rid of Row Lookup's weakness. index query first, then join)
+ * 2. Late Row Lookup (to get rid of Row-Lookup's weakness. index query first, then join)
  * 
- * in function below.
+ * to function below.
  * 
- * For applying Full-Text-Search, follow these steps: 
+ * To apply Full-Text-Search, follow these steps: 
  * 
  * 1. Check your MySQL configs for minimum length for search : SHOW VARIABLES LIKE '%ft%'
  * 2. Change config in 'my.ini' if you MUST:

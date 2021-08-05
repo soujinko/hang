@@ -46,18 +46,19 @@ router.post("/sms_auth", (req, res, next) => {
           (err, data) => {
             if (err) throw err;
             if (data.length > 0) return res.sendStatus(409);
-          }
-        );
-        conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
+            // conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
 
-        const authNumber = Math.floor(Math.random() * 90000) + 10000;
-        NC_SMS(req, next, authNumber);
+            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
+            // NC_SMS(req, next, authNumber);
 
-        conn.query(
-          `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
+            // conn.query(
+            //   `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
+            // );
+            // conn.commit();
+            res.sendStatus(200);
+          } 
         );
-        conn.commit();
-  res.sendStatus(200);
+        
       } catch (err) {
         conn.rollback();
         next(err);
@@ -104,7 +105,7 @@ router.post("/duplicate", (req, res, next) => {
   const sequel = userId
     ? `SELECT userPk FROM users WHERE userId='${userId}'`
     : `SELECT userPk FROM users WHERE nickname='${nickname}'`;
-  getConnection(async (conn) => {
+  getConnection((conn) => {
     try {
       conn.beginTransaction();
       conn.query(sequel, function (err, data) {
@@ -219,18 +220,19 @@ router.post("/signin", (req, res, next) => {
             conn.release();
           }
         });
-
-        res.cookie("jwt", accessToken, {
-          httpOnly: true,
+        
+        res.status(200)
+        .cookie("jwt", accessToken, {
+          httpOnly:true,
           sameSite: "none",
           secure: true,
-        });
-        res.cookie("refresh", refreshToken, {
-          httpOnly: true,
+        })
+        .cookie("refresh", refreshToken, {
+          httpOnly:true, 
           sameSite: "none",
           secure: true,
-        });
-        res.sendStatus(200);
+        })
+        .json({accessToken});
       });
     })(req, res);
   } catch {
@@ -240,21 +242,19 @@ router.post("/signin", (req, res, next) => {
 
 router.delete('/signout', verification, (req, res, next)=>{
   try {
-    res.clearCookie('jwt')
-    res.clearCookie('refresh')
-    res.sendStatus(204)
+    res.status(204)
+    .clearCookie('jwt',{ httpOnly:true, secure:true, sameSite:'none'})
+    .clearCookie('refresh',{ httpOnly:true, secure:true, sameSite:'none'})
   }catch(err){
     next(err)
   }
 })
 
 router.get("/a", verification, (req, res) => {
-  res.send("true");
+  res.status(200).json({status:true})
 });
 
-router.get(
-  "/b",
-  asyncHandle(async (req, res, next) => {
+router.get("/b", asyncHandle(async (req, res, next) => {
     throw new Error("사용자 정의 에러 발생");
   })
 );

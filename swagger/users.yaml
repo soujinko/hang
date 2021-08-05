@@ -1,25 +1,36 @@
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
+
 paths:
   /api/users:
     get:
+      security:
+        - cookieAuth: []
       summary: Get user's basic profile
       tags: [Users]
       description: GET Profile
       responses:
         200:
-          description: Success
-          schema:
-            type: object
-            properties:
-              userPk:
-                type: number
-              nickname:
-                type: string
-              profileImg:
-                type: string
-            example:
-              userPk: 1
-              nickname: kingsujin
-              profileImg: random/url/path
+          content:
+            application/json:
+              description: Success
+              schema:
+                type: object
+                properties:
+                  userPk:
+                    type: number
+                  nickname:
+                    type: string
+                  profileImg:
+                    type: string
+                example:
+                  userPk: 1
+                  nickname: kingsujin
+                  profileImg: random/url/path
         400:
           description: Cannot find user
         500:
@@ -287,6 +298,8 @@ paths:
   
   /api/users/signout:
     delete:
+      security:
+        - cookieAuth: []
       summary: Sign-out (delete cookies)
       tags: [Users]
       description: DELETE Sign-out

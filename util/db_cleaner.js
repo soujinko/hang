@@ -7,6 +7,7 @@ const DBCleaner = () =>{
     try {
       conn.beginTransaction();
       conn.query(`DELETE FROM auth WHERE TIMESTAMPDIFF(SECOND, time, CURRENT_TIMESTAMP) > 60;`)
+      conn.query(`DELETE FROM trips WHERE TIMESTAMPDIFF(DAY, endDate, CURRENT_TIMESTAMP) > 0;`)
     } catch(err) {
       conn.rollback();
       console.error(err);

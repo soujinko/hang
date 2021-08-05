@@ -3,7 +3,7 @@ import users from "./users.js";
 import trips from "./trips.js";
 import likes from "./likes.js";
 import requests from "./requests.js";
-import alarms from "./alarms.js";
+// import alarms from "./alarms.js";
 import auth from "./auth.js";
 
 // 이 파일을 실행해서 db를 세팅하세요
@@ -31,11 +31,6 @@ function createDb() {
     await conn.query(requests, (err, result) => {
       if (err) throw err;
       console.log("requests table created");
-    });
-    // 알람 테이블 생성
-    await conn.query(alarms, (err, result) => {
-      if (err) throw err;
-      console.log("alarms table created");
     });
 
     await conn.query(auth, (err, result) => {

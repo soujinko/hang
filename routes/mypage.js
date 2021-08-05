@@ -185,8 +185,16 @@ router.post("/create_trip", async (req, res, next) => {
     connection.beginTransaction();
     // const { userPk } = req.params;
     const { userPk } = res.locals.user;
-
     const { region, city, startDate, endDate, tripInfo } = req.body;
+    console.log(
+      "등록 정보",
+      userPk,
+      region,
+      city,
+      startDate,
+      endDate,
+      tripInfo
+    );
     // let saveMyTrip = `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`;
     let startNewDate = Date.parse(startDate);
     let endNewDate = Date.parse(endDate);
@@ -195,10 +203,10 @@ router.post("/create_trip", async (req, res, next) => {
 
     // 끝날이 시작날보다 전 이거나, 오늘 날짜보다 시작날이 작다면 error
     if (startNewDate > endNewDate) {
-      throw new Error();
+      throw new Error("날짜 선택 오류");
     }
     if (startNewDate < Date.parse(today)) {
-      throw new Error();
+      throw new Error("날짜 선택 오류");
     }
 
     // 내가 등록하 여행 날짜 리스트와 나를 파트너로 등록한 여행 날짜 리스트
@@ -208,25 +216,49 @@ router.post("/create_trip", async (req, res, next) => {
           `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=${userPk} or partner=${userPk}`
         )
       )
-    )[0].map((e) => [e["left(startDate, 10)"], e["left(endDate, 10)"]]);
+    )[0];
 
-    // 만약 내 여행일정과 겹치면 에러
-    let count = 0;
-    myTripDates.forEach((e) => {
-      let startOld = Date.parse(e[0]);
-      let endOld = Date.parse(e[1]);
-      if (startNewDate >= startOld && startNewDate <= endOld) {
-        throw new Error();
-      } else if (endNewDate >= startOld && endNewDate <= endOld) {
-        throw new Error();
-      } else if (startNewDate <= startOld && endNewDate >= endOld) {
-        throw new Error();
+    if (myTripDates.length > 0) {
+      let myTripDates2 = myTripDates.map((e) => [
+        e["left(startDate, 10)"],
+        e["left(endDate, 10)"],
+      ]);
+      console.log("내 약속 여행 리스트", myTripDates2);
+
+      // 만약 내 여행일정과 겹치면 에러
+      let count = 0;
+      myTripDates2.forEach((e) => {
+        let startOld = Date.parse(e[0]);
+        let endOld = Date.parse(e[1]);
+        if (startNewDate >= startOld && startNewDate < endOld) {
+          throw new Error("날짜 겹침");
+        } else if (endNewDate > startOld && endNewDate <= endOld) {
+          throw new Error("날짜 겹침");
+        } else if (startNewDate <= startOld && endNewDate >= endOld) {
+          throw new Error("날짜 겹침");
+        } else {
+          count += 1;
+        }
+      });
+      // db에 여행 등록
+      if (count === myTripDates.length) {
+        await connection.query(
+          `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`
+        );
+        await connection.commit();
+
+        let newTripId = JSON.parse(
+          JSON.stringify(
+            await connection.query(
+              `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`
+            )
+          )
+        )[0].map((e) => e["tripId"]);
+        res.status(201).send({ newTripId });
       } else {
-        count += 1;
+        throw new Error("반복문 돌다가 오류");
       }
-    });
-    // db에 여행 등록
-    if (count === myTripDates.length) {
+    } else {
       await connection.query(
         `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`
       );
@@ -240,8 +272,6 @@ router.post("/create_trip", async (req, res, next) => {
         )
       )[0].map((e) => e["tripId"]);
       res.status(201).send({ newTripId });
-    } else {
-      throw new Error();
     }
   } catch (err) {
     console.error(err);

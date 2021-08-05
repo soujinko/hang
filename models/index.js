@@ -44,7 +44,7 @@ function createDb() {
     });
 
     await conn.query(
-      "create view userView as select userPk, nickname, userId, region, city, age, gender,guide, profileImg from hang.users",
+      "create view userView as select userPk, nickname, userId, region, city, age, gender,guide, profileImg,intro from hang.users",
       (err, result) => {
         if (err) throw err;
         console.log("view table created");

@@ -353,7 +353,7 @@ router.patch("/reject_request", async (req, res, next) => {
 
     // 해당 리퀘스트 상태 변경하기
     const result = await connection.query(
-      `UPDATE requests set status=0 where requestId=${requestId} and (recPk=${userPk} or reqPk=${userPk})`
+      `DELETE FROM requests where requestId=${requestId} and (recPk=${userPk} or reqPk=${userPk})`
     );
     if (result[0].affectedRows === 0) {
       throw new Error();
@@ -398,7 +398,7 @@ router.patch("/reject_confirm", async (req, res, next) => {
   }
 });
 
-// 나의 확정 약속 취소
+// 나의 약속 확정
 router.post("/make_promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
@@ -435,10 +435,13 @@ router.post("/make_promise", async (req, res, next) => {
     }
 
     const result = await connection.query(
-      `UPDATE trips a inner join requests b on a.tripId = b.tripId set a.partner=${setPartner},b.status=0 where a.tripId=${tripId} and b.requestId=${requestId}`
+      `UPDATE trips set partner=${setPartner} where tripId=${tripId}`
+    );
+    const result2 = await connection.query(
+      `DELETE FROM requests where requestId=${requestId}`
     );
 
-    if (result[0].affectedRows === 0) {
+    if (result[0].affectedRows === 0 || result2[0].affectedRows === 0) {
       throw new Error();
     } else {
       await connection.commit();

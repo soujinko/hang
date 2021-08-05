@@ -11,7 +11,7 @@ router.get("/", async (req, res, next) => {
       conn.beginTransaction();
 
       const { userPk } = res.locals.user;
-      const { userPk } = req.params;
+      // const { userPk } = req.params;
       const findMyTrip = `select * from trips where userPk ='${userPk}' and partner is NULL`;
       // 해당 페이지 유저의 프로필 정보 가져오기
       conn.query(findMyTrip, function (err, result) {

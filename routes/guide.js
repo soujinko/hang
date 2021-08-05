@@ -4,13 +4,13 @@ import { connection } from "../models/db.js";
 
 const router = express.Router();
 
-router.get("/:userPk", async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   getConnection(async (conn) => {
     try {
       let tripInfo = [];
       conn.beginTransaction();
 
-      // const { userPk } = res.locals.user;
+      const { userPk } = res.locals.user;
       const { userPk } = req.params;
       const findMyTrip = `select * from trips where userPk ='${userPk}' and partner is NULL`;
       // 해당 페이지 유저의 프로필 정보 가져오기
@@ -41,10 +41,10 @@ router.get("/:userPk", async (req, res, next) => {
   });
 });
 
-router.post("/:userPk", async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
+    const { userPk } = res.locals.user;
     // const { userPk } = req.params;
     const { pagePk, tripId, startDate, endDate } = req.body;
 

@@ -7,8 +7,8 @@ const router = express.Router();
 router.post("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { tripId, userPk } = req.body;
+    const { userPk } = res.locals.user;
+    const { tripId } = req.body;
     // 오늘 날짜 구하기
     let today = new Date();
     today = today.toISOString().slice(0, 10);

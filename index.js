@@ -40,18 +40,18 @@ app.use("/api", router);
 app.use("/docs", swaggerDocs);
 app.use(errorHandlers);
 
-// const options = {
-//   // letsencrypt로 받은 인증서 경로를 입력
-//   ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
-//   key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
-// };
+const options = {
+  // letsencrypt로 받은 인증서 경로를 입력
+  ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
+  key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
+};
 
 const server = http.createServer(app);
 
-server.listen(5000, () => {
+server.listen(3000, () => {
   console.log("서버 연결 성공");
 });
-// https.createServer(options, app).listen(443);
+https.createServer(options, app).listen(443);
 
 export { server, app };

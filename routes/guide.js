@@ -54,8 +54,7 @@ router.post("/", async (req, res, next) => {
     today = today.toISOString().slice(0, 10);
 
     if (startMyDate < Date.parse(today)) {
-      // console.log("날짜 오류");
-      throw new Error();
+      throw new Error("날짜 오류");
     }
 
     const checkTrip = JSON.parse(
@@ -67,8 +66,18 @@ router.post("/", async (req, res, next) => {
     )[0];
 
     if (checkTrip.length === 0) {
-      console.log("여행 정보 없음");
-      throw new Error();
+      throw new Error("여행 정보 없음");
+    }
+
+    const requestExist = JSON.parse(
+      JSON.stringify(
+        await connection.query(
+          `select * from requests where tripId=${tripId} and reqPk=${userPk} and recPk=${pagePk}`
+        )
+      )
+    )[0];
+    if (requestExist.length > 0) {
+      throw new Error("이미 가이드를 요청했어요");
     }
 
     const userTripDates = JSON.parse(
@@ -84,15 +93,12 @@ router.post("/", async (req, res, next) => {
     userTripDates.forEach((e) => {
       let startOld = Date.parse(e[0]);
       let endOld = Date.parse(e[1]);
-      if (startMyDate >= startOld && startMyDate <= endOld) {
-        // console.log("날짜 겹침1");
-        throw new Error();
-      } else if (endMyDate >= startOld && endMyDate <= endOld) {
-        // console.log("날짜 겹침2");
-        throw new Error();
+      if (startMyDate > startOld && startMyDate < endOld) {
+        throw new Error("날짜 겹침1");
+      } else if (endMyDate > startOld && endMyDate < endOld) {
+        throw new Error("날짜 겹침2");
       } else if (startMyDate <= startOld && endMyDate >= endOld) {
-        // console.log("날짜 겹침3");
-        throw new Error();
+        throw new Error("날짜 겹침3");
       } else {
         count += 1;
         console.log("count", count);
@@ -103,7 +109,7 @@ router.post("/", async (req, res, next) => {
         `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
       );
       if (result[0].affectedRows === 0) {
-        throw new Error();
+        throw new Error("디비 등록하다 오류");
       } else {
         await connection.commit();
         res.status(201).send();
@@ -112,8 +118,7 @@ router.post("/", async (req, res, next) => {
   } catch (err) {
     console.error(err);
     await connection.rollback();
-    err.status = 400;
-    next(err);
+    res.status(400).send({ errorMessage: err.message });
   } finally {
     connection.release();
   }

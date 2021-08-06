@@ -17,7 +17,7 @@ router.post("/", async (req, res, next) => {
     const getMyProfile = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select guide from userview where userPk=${userPk}`
+          `select guide from userView where userPk=${userPk}`
         )
       )
     )[0][0];
@@ -87,12 +87,12 @@ router.post("/", async (req, res, next) => {
       userTripDates2.forEach((e) => {
         let startOld = Date.parse(e[0]);
         let endOld = Date.parse(e[1]);
-        if (startMyDate >= startOld && startMyDate <= endOld) {
-          throw new Error("해당 날짜에 이미 약속이 있어요");
-        } else if (endMyDate >= startOld && endMyDate <= endOld) {
-          throw new Error("해당 날짜에 이미 약속이 있어요");
+        if (startMyDate > startOld && startMyDate < endOld) {
+          throw new Error("해당 날짜에 이미 약속이 있어요1");
+        } else if (endMyDate > startOld && endMyDate < endOld) {
+          throw new Error("해당 날짜에 이미 약속이 있어요2");
         } else if (startMyDate <= startOld && endMyDate >= endOld) {
-          throw new Error("해당 날짜에 이미 약속이 있어요");
+          throw new Error("해당 날짜에 이미 약속이 있어요3");
         } else {
           count += 1;
           console.log("count", count);
@@ -128,8 +128,7 @@ router.post("/", async (req, res, next) => {
   } catch (err) {
     console.error(err);
     await connection.rollback();
-    err.status = 400;
-    next(err);
+    res.status(400).send({ errorMessage: err.message });
   } finally {
     connection.release();
   }

@@ -13,8 +13,8 @@ const router = express.Router();
 
 router.use("/users", usersRouter);
 
-router.use(verification);
-router.use(alarms);
+// router.use(verification);
+// router.use(alarms);
 
 router.use("/main", mainRouter);
 router.use("/like", likeRouter);

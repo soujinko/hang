@@ -57,6 +57,7 @@ router.get("/", async (req, res) => {
           next(err);
         }
         const searchRegion = result[0].region;
+        console.log("찾는 지역", searchRegion);
         const findGuides = `select * from userView where region ='${searchRegion}' and guide=1 and userPk not in (${userPk}) ORDER BY RAND() LIMIT 3`;
         const findTravelers = `select a.* from userView a left join trips b on a.userPk = b.userPk where b.region ='${searchRegion}' and b.partner is NULL Group by userPk ORDER BY RAND() LIMIT 3 `;
         const likeList = `select targetPk from likes where userPk=${userPk} `;
@@ -87,6 +88,7 @@ router.get("/", async (req, res) => {
               } else {
                 e.like = false;
               }
+              console.log("내 지역 가이드!!", guide);
             });
           });
           // 내지역 여행자 찾기
@@ -97,6 +99,7 @@ router.get("/", async (req, res) => {
               next(err);
             }
             traveler = Object.values(JSON.parse(JSON.stringify(result)));
+
             traveler.forEach((e) => {
               // 내가 좋아요한 목록에 있으면 true
               if (mylikes.includes(e.userPk)) {
@@ -105,6 +108,7 @@ router.get("/", async (req, res) => {
                 e.like = false;
               }
             });
+            console.log("내 지역 여행자!!", traveler);
             res.send({ promise, guide, traveler });
           });
         });

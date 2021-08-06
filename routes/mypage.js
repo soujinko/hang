@@ -9,7 +9,6 @@ router.get("/", async (req, res, next) => {
     try {
       let userInfo;
       let tripInfo;
-      let confirmed = [];
       const { userPk } = res.locals.user;
       // const { userPk } = req.params;
       const finduser = `select * from userView where userPk ='${userPk}'`;
@@ -33,51 +32,7 @@ router.get("/", async (req, res, next) => {
             let tripInfo = Object.values(JSON.parse(JSON.stringify(result)));
             console.log("나의 여행 리스트", tripInfo);
 
-            // 내가 가이드로 등록한 여행자 (확정 약속)
-            tripInfo.forEach((e) => {
-              if (e.partner) {
-                let element = {};
-                conn.query(
-                  `select * from users where userPk =${e.partner}`,
-                  function (err, result) {
-                    element.userPk = result[0].userPk;
-                    element.tripId = e.tripId;
-                    element.guide = true;
-                    element.nickname = result[0].nickname;
-                    element.startDate = e.startDate;
-                    element.endDate = e.endDate;
-                    element.region = e.region;
-                    element.city = e.city;
-                    confirmed.push(element);
-                    // console.log("컨펌된 약속 내여행", myPromise.confirmed);
-                  }
-                );
-              }
-            });
-
-            // 나를 가이드로 등록한 여행자 (확정 약속)
-            conn.query(
-              `select * from users a left join trips b on a.userPk = b.userPk where b.partner = ${userPk} `,
-              function (err, result) {
-                let confirmTraveler = Object.values(
-                  JSON.parse(JSON.stringify(result))
-                );
-                console.log("확정약소2", confirmTraveler);
-                confirmTraveler.forEach((e) => {
-                  let element = {};
-                  element.userPk = e.userPk;
-                  element.tripId = e.tripId;
-                  element.guide = false;
-                  element.nickname = e.nickname;
-                  element.startDate = e.startDate;
-                  element.endDate = e.endDate;
-                  element.region = e.region;
-                  element.city = e.city;
-                  confirmed.push(element);
-                });
-                res.send({ userInfo, tripInfo, confirmed });
-              }
-            );
+            res.send({ userInfo, tripInfo });
           }
         );
       });
@@ -100,9 +55,67 @@ router.get("/promise", async (req, res, next) => {
     connection.beginTransaction();
     // const { userPk } = req.params;
     const { userPk } = res.locals.user;
-
+    let confirmed = [];
     let requested = [];
     let received = [];
+
+    // 나를 파트너로 등록한, 혹은 내가 파트너를 등록한 여행 리스트
+    const confirmTripList = JSON.parse(
+      JSON.stringify(
+        await connection.query(
+          `select * from trips where (userPk =${userPk} and partner is not null) or partner=${userPk} `
+        )
+      )
+    )[0];
+    console.log("나의 여행 리스트", confirmTripList);
+    if (confirmTripList.length === 0) {
+      confirmed = [];
+    } else {
+      confirmTripList.forEach(async (e) => {
+        // 나를 가이드로 등록한 여행자 (확정 약속)
+        if (e.partner === parseInt(userPk)) {
+          let element = {};
+          const result = JSON.parse(
+            JSON.stringify(
+              await connection.query(
+                `select * from userView where userPk = ${e.userPk} `
+              )
+            )
+          )[0];
+          console.log("나를 가이드로 등록한 사람", result);
+          element.userPk = result[0].userPk;
+          element.tripId = e.tripId;
+          element.guide = false;
+          element.nickname = result[0].nickname;
+          element.startDate = e.startDate;
+          element.endDate = e.endDate;
+          element.region = e.region;
+          element.city = e.city;
+          confirmed.push(element);
+        } else {
+          // 내가 가이드로 등록한 여행자 (확정 약속)
+          let element = {};
+          const result = JSON.parse(
+            JSON.stringify(
+              await connection.query(
+                `select * from userView where userPk = ${e.partner} `
+              )
+            )
+          )[0];
+          console.log("내가 가이드로 등록한 사람", result);
+          element.userPk = result[0].userPk;
+          element.tripId = e.tripId;
+          element.guide = true;
+          element.nickname = result[0].nickname;
+          element.startDate = e.startDate;
+          element.endDate = e.endDate;
+          element.region = e.region;
+          element.city = e.city;
+          confirmed.push(element);
+        }
+      });
+    }
+
     const reqList = JSON.parse(
       JSON.stringify(
         await connection.query(
@@ -110,27 +123,34 @@ router.get("/promise", async (req, res, next) => {
         )
       )
     )[0];
-    reqList.forEach(async (e) => {
-      let element = {};
-      const elements = JSON.parse(
-        JSON.stringify(
-          await connection.query(
-            `select * from trips where tripId = ${e.tripId}`
+    console.log("reqList", reqList);
+    if (reqList.length === 0) {
+      requested = [];
+    } else {
+      reqList.forEach(async (e) => {
+        let element = {};
+        const elements = JSON.parse(
+          JSON.stringify(
+            await connection.query(
+              `select * from trips where tripId = ${e.tripId}`
+            )
           )
-        )
-      )[0];
-      elements.forEach((el) => {
-        element.userPk = e.userPk;
-        element.requestId = e.requestId;
-        element.tripId = e.tripId;
-        element.nickname = e.nickname;
-        element.startDate = el.startDate;
-        element.endDate = el.endDate;
-        element.region = el.region;
-        element.city = el.city;
+        )[0];
+        elements.forEach((el) => {
+          element.userPk = e.userPk;
+          element.requestId = e.requestId;
+          element.tripId = e.tripId;
+          element.nickname = e.nickname;
+          element.startDate = el.startDate;
+          element.endDate = el.endDate;
+          element.region = el.region;
+          element.city = el.city;
+        });
+        requested.push(element);
+        console.log("element2", element);
+        console.log("requested", requested, requested.length);
       });
-      requested.push(element);
-    });
+    }
 
     const recList = JSON.parse(
       JSON.stringify(
@@ -139,35 +159,45 @@ router.get("/promise", async (req, res, next) => {
         )
       )
     )[0];
-    console.log(recList, "recList");
-    reqList.forEach(async (e) => {
-      let element = {};
-      const elements = JSON.parse(
-        JSON.stringify(
-          await connection.query(
-            `select * from trips where tripId = ${e.tripId}`
+    console.log("recList", recList);
+
+    if (recList.length === 0) {
+      received = [];
+    } else {
+      recList.forEach(async (e) => {
+        let element = {};
+        const elements = JSON.parse(
+          JSON.stringify(
+            await connection.query(
+              `select * from trips where tripId = ${e.tripId}`
+            )
           )
-        )
-      )[0];
-      elements.forEach((el) => {
-        element.userPk = e.userPk;
-        element.requestId = e.requestId;
-        element.tripId = e.tripId;
-        element.nickname = e.nickname;
-        element.startDate = el.startDate;
-        element.endDate = el.endDate;
-        element.region = el.region;
-        element.city = el.city;
+        )[0];
+        elements.forEach((el) => {
+          element.userPk = e.userPk;
+          element.requestId = e.requestId;
+          element.tripId = e.tripId;
+          element.nickname = e.nickname;
+          element.startDate = el.startDate;
+          element.endDate = el.endDate;
+          element.region = el.region;
+          element.city = el.city;
+        });
+        received.push(element);
+        console.log("received", received, received.length);
+        console.log("element1", element);
       });
-      received.push(element);
-      if (
-        received.length == recList.length &&
-        requested.length == reqList.length
-      ) {
-        await connection.commit();
-        res.send({ received, requested });
-      }
-    });
+    }
+
+    if (
+      received.length === recList.length &&
+      requested.length === reqList.length &&
+      confirmed.length === confirmTripList.length
+    ) {
+      await connection.commit();
+      console.log("confirmed", confirmed);
+      res.send({ confirmed, received, requested });
+    }
   } catch (err) {
     console.error(err);
     await connection.rollback();
@@ -230,18 +260,19 @@ router.post("/create_trip", async (req, res, next) => {
       myTripDates2.forEach((e) => {
         let startOld = Date.parse(e[0]);
         let endOld = Date.parse(e[1]);
-        if (startNewDate >= startOld && startNewDate < endOld) {
-          throw new Error("날짜 겹침");
-        } else if (endNewDate > startOld && endNewDate <= endOld) {
-          throw new Error("날짜 겹침");
+        console.log("start, end date", startOld, endOld);
+        if (startNewDate > startOld && startNewDate < endOld) {
+          throw new Error("날짜 겹침1");
+        } else if (endNewDate > startOld && endNewDate < endOld) {
+          throw new Error("날짜 겹침2");
         } else if (startNewDate <= startOld && endNewDate >= endOld) {
-          throw new Error("날짜 겹침");
+          throw new Error("날짜 겹침3");
         } else {
           count += 1;
         }
       });
       // db에 여행 등록
-      if (count === myTripDates.length) {
+      if (count === myTripDates2.length) {
         await connection.query(
           `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`
         );
@@ -274,10 +305,9 @@ router.post("/create_trip", async (req, res, next) => {
       res.status(201).send({ newTripId });
     }
   } catch (err) {
-    console.error(err);
+    console.error("에러메시지 확인", err.message);
     await connection.rollback();
-    err.status = 400;
-    next(err);
+    res.status(400).send({ errorMessage: err.message });
   } finally {
     connection.release();
   }

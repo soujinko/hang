@@ -1,0 +1,50 @@
+# paths:
+#   /api/guide:
+#     get:
+#       summary: Get trip lists
+#       tags: [Guide Page]
+#       description: GET main page
+#       responses:
+#         200:
+#           description: |
+#             Success
+
+#             Get user's trip lists
+#           content:
+#             application/json:
+#                 schema:
+#                 type: array
+#                 items:
+#                   type: object
+#                   properties:
+#                       tripId: 
+#                         type: number
+#                       userPk: 
+#                         type: number
+#                       region: 
+#                         type: string
+#                       city:
+#                         type: string
+#                       startDate:
+#                         type: date
+#                       endDate:
+#                         type: date
+#                       tripInfo:
+#                         type: string
+#                       partner:
+#                         type: null
+#                     example:
+#                       tripId: 1
+#                       userPk: 2
+#                       region: 서울
+#                       city: 강남구
+#                       startDate: 2021-06-12T00:00:00.000Z  
+#                       endDate: 2021-06-14T00:00:00.000Z  
+#                       tripInfo: 기대된당
+#                       partner: null
+                 
+                    
+#         401:
+#           description: Unauthorized
+#         500:
+#           description: internal server errors

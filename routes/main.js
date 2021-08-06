@@ -1,7 +1,7 @@
 import express from "express";
 import verification from '../middleware/verification.js';
 import { getConnection } from "../models/db.js";
-import search from '../services/search_paginate.js'
+import searchAndPaginate from '../services/search_paginate.js';
 import asyncHandle from '../util/async_handler.js';
 
 const router = express.Router();
@@ -120,9 +120,9 @@ router.get("/", async (req, res) => {
   });
 });
 
-router.get('/search', verification, asyncHandle(async(req, res, next)=>{
+router.get('/search', asyncHandle(async(req, res, next)=>{
   const { userPk } = res.locals.user;
-  const result = await search(req, userPk, next);
+  const result = await searchAndPaginate(req, userPk, next);
   res.status(200).json({result})
 }))
 

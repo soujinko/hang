@@ -13,29 +13,6 @@ dotenv.config();
 const router = express.Router();
 
 // pk, nick, profileImg전달
-router.get("/", verification, (req, res, next) => {
-  const { userPk } = res.locals.user;
-  getConnection((conn) => {
-    try {
-      conn.beginTransaction();
-      conn.query(
-        `SELECT userPk, nickname, profileImg FROM users WHERE userPk=${userPk}`,
-        (err, data) => {
-          if (err) throw err;
-          if (data.length > 0) {
-            const { userPk, nickname, profileImg } = JSON.parse(
-              JSON.stringify(data[0])
-            );
-            res.status(200).json({ userPk, nickname, profileImg });
-          } else res.status(400);
-        }
-      );
-    } catch (err) {
-      next(err);
-    }
-  });
-});
-
 router.post("/sms_auth", (req, res, next) => {
     const { pNum: phoneNumber } = req.body;
     getConnection((conn) => {
@@ -81,8 +58,7 @@ router.post("/p_auth", (req, res, next) => {
           const authInfo = JSON.parse(JSON.stringify(data));
           if (
             Math.floor(+new Date(authInfo[0]?.time) / 1000) -
-              Math.floor(+new Date() / 1000) >=
-            -60
+              Math.floor(+new Date() / 1000) >= -60
           ) {
             // 핸드폰 번호, 인증번호, 유효기간 모두 성립
             conn.query(`DELETE FROM auth WHERE pNum='${pNum}'`);
@@ -242,9 +218,10 @@ router.post("/signin", (req, res, next) => {
 
 router.delete('/signout', verification, (req, res, next)=>{
   try {
-    res.status(204)
+    res
     .clearCookie('jwt',{ httpOnly:true, secure:true, sameSite:'none'})
     .clearCookie('refresh',{ httpOnly:true, secure:true, sameSite:'none'})
+    .sendStatus(204)
   }catch(err){
     next(err)
   }

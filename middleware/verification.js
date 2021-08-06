@@ -5,8 +5,7 @@ import { getConnection, connection } from '../models/db.js'
 dotenv.config()
 
 const verification = async (req, res, next) => {
-  // 토큰 자체가 없는 경우
-  
+  // 토큰 자체가 없는 경우 or cookies jwt와 headers jwt가 다른경우
   if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)
   // jwt verify가 성공할 경우 refresh check
   try{

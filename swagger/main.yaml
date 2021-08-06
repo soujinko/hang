@@ -94,3 +94,85 @@ paths:
           description: Unauthorized
         500:
           description: internal server errors
+  
+  /api/main/search:
+    get:
+      summary: search by conditions
+      tags: [Main Page]
+      description: GET Search
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    nickname:
+                      type: string
+                    age:
+                      type: number
+                    gender: 
+                      type: boolean
+                    region:
+                      type: string
+                    city:
+                      type: string
+                    profileImg:
+                      type: string
+                    like:
+                      type: boolean
+                  example:
+                    nickname: kingsujin
+                    age: 20
+                    gender: 0
+                    region: 경기
+                    city: 서울
+                    profileImg: random/url/path
+                    like: 1
+        401:
+          description: Unauthorized
+        500:
+          description: Internal server errors
+      
+      parameters:
+        - name: keyword
+          in: query
+          description: Search keyword
+          type: string
+          required: true
+        
+        - name: region
+          in: query
+          description: Search condition
+          type: string
+          required: true
+        
+        - name: city
+          in: query
+          description: Search condition
+          type: string
+          required: true
+        
+        - in: query
+          name: traveler
+          description: Search condition
+          type: boolean
+          required: true
+        
+        - name: guide
+          in: query
+          description: Search condition
+          type: boolean
+          required: true
+        
+        - name: pageNum
+          in: query
+          description: Search condition
+          type: number
+          required: true
+          default: 1
+        
+      

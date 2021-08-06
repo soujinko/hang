@@ -6,157 +6,127 @@ components:
       name: jwt
 
 paths:
-  /api/users:
-    get:
-      security:
-        - cookieAuth: []
-      summary: Get user's basic profile
-      tags: [Users]
-      description: GET Profile
-      responses:
-        200:
-          content:
-            application/json:
-              description: Success
-              schema:
-                type: object
-                properties:
-                  userPk:
-                    type: number
-                  nickname:
-                    type: string
-                  profileImg:
-                    type: string
-                example:
-                  userPk: 1
-                  nickname: kingsujin
-                  profileImg: random/url/path
-        400:
-          description: Cannot find user
-        500:
-          description: Internal server error
-
-    post:
-      summary: Registration
-      tags: [Users]
-      description: POST Registration
-      responses:
-        200:
-          description: Success
-        409:
-          description: UserId already been taken
-        500:
-          description: internal server errors
-      parameters:
-        - name: userId
-          in: formData
-          description: user's id that must be unique
-          type: string
-          required: true
-        
-        - name: nickname
-          in: formData
-          description: user's nickname that must be unique
-          type: string
-          required: true
-        
-        - name: password
-          in: formData
-          description: password on registration
-          type: string
-          required: true
-        
-        - name: age
-          in: formData
-          description: user's age (number)
-          type: number
-          required: true
-          schema:
-            type: array
-            items:
-              type: number
-              enum:
-                - 10
-                - 20
-                - 30
-                - 40
-        - name: gender
-          in: formData
-          description: user's gender
-          type: boolean
-          required: true
-
-        - name: pNum
-          in: formData
-          description: user's phone number
-          type: string
-          required: true
-
-        - name: region
-          in: formData
-          description: province that user lives in
-          type: string
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - 경기
-                - 경남
-                - 제주
-              default: 경기
-        
-        - name: city
-          in: formData
-          description: city that user lives in
-          type: string
-          required: true
-          schema:
-            type: array
-            items:
-              type: string
-              enum:
-                - 서울시
-                - 부산시
-                - 창원시
-                - 제주시
-                - 서귀포시
-        
-        - name: profileImg
-          in: formData
-          description: user's profile image url
-          type: string
-          required: true
+  post:
+    summary: Registration
+    tags: [Users]
+    description: POST Registration
+    responses:
+      200:
+        description: Success
+      409:
+        description: UserId already been taken
+      500:
+        description: internal server errors
+    parameters:
+      - name: userId
+        in: formData
+        description: user's id that must be unique
+        type: string
+        required: true
       
-      requestBody:       
-        content:         
-          application/json:            
-            schema:
-              type: object
-              properties:
-                userId: 
-                  type: string
-                nickname:
-                  type: string
-                password:
-                  type: string
-                age:
-                  type: number
-                region:
-                  type: string
-                city:
-                  type: string
-                profileImg:
-                  type: string
-              example:
-                userId: randID123
-                nickname: randnick11
-                password: randPW123
-                age: 20
-                region: 경기도
-                city: 하남
-                profileImg: random/url/path
+      - name: nickname
+        in: formData
+        description: user's nickname that must be unique
+        type: string
+        required: true
+      
+      - name: password
+        in: formData
+        description: password on registration
+        type: string
+        required: true
+      
+      - name: age
+        in: formData
+        description: user's age (number)
+        type: number
+        required: true
+        schema:
+          type: array
+          items:
+            type: number
+            enum:
+              - 10
+              - 20
+              - 30
+              - 40
+      - name: gender
+        in: formData
+        description: user's gender
+        type: boolean
+        required: true
+
+      - name: pNum
+        in: formData
+        description: user's phone number
+        type: string
+        required: true
+
+      - name: region
+        in: formData
+        description: province that user lives in
+        type: string
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+              - 경기
+              - 경남
+              - 제주
+            default: 경기
+      
+      - name: city
+        in: formData
+        description: city that user lives in
+        type: string
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+              - 서울시
+              - 부산시
+              - 창원시
+              - 제주시
+              - 서귀포시
+      
+      - name: profileImg
+        in: formData
+        description: user's profile image url
+        type: string
+        required: true
+    
+    requestBody:       
+      content:         
+        application/json:            
+          schema:
+            type: object
+            properties:
+              userId: 
+                type: string
+              nickname:
+                type: string
+              password:
+                type: string
+              age:
+                type: number
+              region:
+                type: string
+              city:
+                type: string
+              profileImg:
+                type: string
+            example:
+              userId: randID123
+              nickname: randnick11
+              password: randPW123
+              age: 20
+              region: 경기도
+              city: 하남
+              profileImg: random/url/path
      
 
   /api/users/signin:

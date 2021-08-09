@@ -35,7 +35,6 @@ app.use(express.urlencoded({ extended: false }));
 // app.use(csrfProtection({ cookie: true })); // csrfProtection은 cookieparser나 session미들웨어보다 밑에 있어야한다.
 app.use(passport.initialize());
 passportConfig();
-DBCleaner();
 
 app.use("/api", router);
 app.use("/docs", swaggerDocs);

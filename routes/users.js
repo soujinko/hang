@@ -1,41 +1,20 @@
 import express from "express";
 import crypto from "crypto";
-import { getConnection, connection } from "../models/db.js";
+import { getConnection } from "../models/db.js";
 import NC_SMS from "../services/NC_SMS.js";
 import dotenv from "dotenv";
 import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
+import redis from 'redis'
 
 dotenv.config();
 
+const client = redis.createClient();
 const router = express.Router();
 
 // pk, nick, profileImg전달
-router.get("/", verification, (req, res, next) => {
-  const { userPk } = res.locals.user;
-  getConnection((conn) => {
-    try {
-      conn.beginTransaction();
-      conn.query(
-        `SELECT userPk, nickname, profileImg FROM users WHERE userPk=${userPk}`,
-        (err, data) => {
-          if (err) throw err;
-          if (data.length > 0) {
-            const { userPk, nickname, profileImg } = JSON.parse(
-              JSON.stringify(data[0])
-            );
-            res.status(200).json({ userPk, nickname, profileImg });
-          } else res.status(400);
-        }
-      );
-    } catch (err) {
-      next(err);
-    }
-  });
-});
-
 router.post("/sms_auth", (req, res, next) => {
     const { pNum: phoneNumber } = req.body;
     getConnection((conn) => {
@@ -46,15 +25,11 @@ router.post("/sms_auth", (req, res, next) => {
           (err, data) => {
             if (err) throw err;
             if (data.length > 0) return res.sendStatus(409);
-            // conn.query(`DELETE FROM auth WHERE pNum=${phoneNumber}`);
-
-            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
-            // NC_SMS(req, next, authNumber);
-
-            // conn.query(
-            //   `INSERT INTO auth(pNum, aNum) VALUES('${phoneNumber}', ${authNumber})`
-            // );
-            // conn.commit();
+        
+            const authNumber = Math.floor(Math.random() * 90000) + 10000;
+            NC_SMS(req, next, authNumber);
+            // redis에 저장
+            client.set(phoneNumber, authNumber, 'EX', 60)
             res.sendStatus(200);
           } 
         );
@@ -69,35 +44,13 @@ router.post("/sms_auth", (req, res, next) => {
 });
 
 router.post("/p_auth", (req, res, next) => {
-  const { pNum, aNum } = req.body;
-  getConnection((conn) => {
-    try {
-      conn.beginTransaction();
-      // 인증번호는 극히 적은 확률로 같은 숫자가 존재할 수 있음. 또한 특정 사용자가 특정 번호를 입력했다는 증명이 되어야함. 그래서 AND
-      conn.query(
-        `SELECT * FROM auth WHERE pNum='${pNum}' AND aNum=${aNum}`,
-        (err, data) => {
-          if (err) throw err;
-          const authInfo = JSON.parse(JSON.stringify(data));
-          if (
-            Math.floor(+new Date(authInfo[0]?.time) / 1000) -
-              Math.floor(+new Date() / 1000) >=
-            -60
-          ) {
-            // 핸드폰 번호, 인증번호, 유효기간 모두 성립
-            conn.query(`DELETE FROM auth WHERE pNum='${pNum}'`);
-            conn.commit();
-            res.sendStatus(200);
-          } else res.sendStatus(401);
-        }
-      );
-    } catch (err) {
-      conn.rollback();
-      next(err);
-    } finally {
-      conn.release();
-    }
-  });
+  const { pNum:phoneNumber, aNum:authNumber } = req.body;
+  // redis 데이터 불러와서 비교
+  client.get(phoneNumber, (err, data) => {
+    if (err) next(err)
+    else if (data === authNumber) res.sendStatus(202)
+    else res.sendStatus(409)
+  })
 });
 
 router.post("/duplicate", (req, res, next) => {
@@ -242,9 +195,10 @@ router.post("/signin", (req, res, next) => {
 
 router.delete('/signout', verification, (req, res, next)=>{
   try {
-    res.status(204)
+    res
     .clearCookie('jwt',{ httpOnly:true, secure:true, sameSite:'none'})
     .clearCookie('refresh',{ httpOnly:true, secure:true, sameSite:'none'})
+    .sendStatus(204)
   }catch(err){
     next(err)
   }

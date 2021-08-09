@@ -1,0 +1,26 @@
+paths:
+  /api/traveler:
+    post:
+      summary: Add request traveler
+      tags: [traveler Page]
+      description: POST request traveler
+      
+      responses:
+        201:
+          description: Success
+        400:
+          description: Cannot request 
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors  
+      
+      parameters:
+        - name: tripId
+          in: body
+          description: Unique Id of trip
+          type: number
+          required: true
+          example:
+            tripId: 3
+

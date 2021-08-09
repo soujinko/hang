@@ -4,7 +4,7 @@ import express from "express";
 const router = express.Router();
 
 // 좋아요
-router.get("/", async (req, res) => {
+router.get("/", async (req, res, next) => {
   getConnection(async (conn) => {
     try {
       conn.beginTransaction();
@@ -33,7 +33,7 @@ router.get("/", async (req, res) => {
   });
 });
 
-router.post("/", async (req, res) => {
+router.post("/", async (req, res, next) => {
   getConnection(async (conn) => {
     try {
       conn.beginTransaction();
@@ -62,7 +62,7 @@ router.post("/", async (req, res) => {
   });
 });
 
-router.delete("/", async (req, res) => {
+router.delete("/", async (req, res, next) => {
   getConnection(async (conn) => {
     try {
       conn.beginTransaction();

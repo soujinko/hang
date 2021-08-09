@@ -14,7 +14,7 @@ import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
 import https from "https";
 import DBCleaner from "./util/db_cleaner.js";
-import webSocket from "./websocket.js";
+// import webSocket from "./websocket.js";
 
 const app = express();
 
@@ -41,19 +41,19 @@ app.use("/api", router);
 app.use("/docs", swaggerDocs);
 app.use(errorHandlers);
 
-// const options = {
-//   // letsencrypt로 받은 인증서 경로를 입력
-//   ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
-//   key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
-// };
+const options = {
+  // letsencrypt로 받은 인증서 경로를 입력
+  ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
+  key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
+};
 
 const server = http.createServer(app);
 
 server.listen(3000, () => {
   console.log("서버 연결 성공");
 });
-// https.createServer(options, app).listen(443);
+https.createServer(options, app).listen(443);
 webSocket(server);
 
 export { server, app };

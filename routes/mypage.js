@@ -1,6 +1,7 @@
 import express from "express";
 import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
+import async from "async";
 const router = express.Router();
 // 내 프로필, 여행 일정, 확정 약속 불러오기
 router.get("/", async (req, res, next) => {
@@ -49,7 +50,7 @@ router.get("/", async (req, res, next) => {
   });
 });
 
-// 나의 약속 불러오기 (미확정)
+// 나의 약속 불러오기
 router.get("/promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
@@ -67,7 +68,7 @@ router.get("/promise", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("나의 여행 리스트", confirmTripList);
+    console.log("confirmTripList.length", confirmTripList.length);
     if (confirmTripList.length === 0) {
       confirmed = [];
     } else {
@@ -82,8 +83,8 @@ router.get("/promise", async (req, res, next) => {
               )
             )
           )[0];
-          console.log("나를 가이드로 등록한 사람", result);
           element.userPk = result[0].userPk;
+          element.profileImg = result[0].profileImg;
           element.tripId = e.tripId;
           element.guide = false;
           element.nickname = result[0].nickname;
@@ -102,8 +103,8 @@ router.get("/promise", async (req, res, next) => {
               )
             )
           )[0];
-          console.log("내가 가이드로 등록한 사람", result);
           element.userPk = result[0].userPk;
+          element.profileImg = result[0].profileImg;
           element.tripId = e.tripId;
           element.guide = true;
           element.nickname = result[0].nickname;
@@ -119,11 +120,11 @@ router.get("/promise", async (req, res, next) => {
     const reqList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select a.*, b.tripId, b.requestId from users a left join requests b on a.userPk = b.recPk where b.reqPk=${userPk}`
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.recPk where b.reqPk=${userPk}`
         )
       )
     )[0];
-    console.log("reqList", reqList);
+    console.log("reqList.length", reqList.length);
     if (reqList.length === 0) {
       requested = [];
     } else {
@@ -138,6 +139,7 @@ router.get("/promise", async (req, res, next) => {
         )[0];
         elements.forEach((el) => {
           element.userPk = e.userPk;
+          element.profileImg = e.profileImg;
           element.requestId = e.requestId;
           element.tripId = e.tripId;
           element.nickname = e.nickname;
@@ -147,22 +149,29 @@ router.get("/promise", async (req, res, next) => {
           element.city = el.city;
         });
         requested.push(element);
-        console.log("element2", element);
-        console.log("requested", requested, requested.length);
       });
     }
 
     const recList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select a.*, b.tripId, b.requestId from users a left join requests b on a.userPk = b.reqPk where b.recPk=${userPk}`
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=${userPk}`
         )
       )
     )[0];
-    console.log("recList", recList);
+    console.log("recList.length", recList.length);
 
     if (recList.length === 0) {
       received = [];
+      if (
+        received.length === recList.length &&
+        requested.length === reqList.length &&
+        confirmed.length === confirmTripList.length
+      ) {
+        await connection.commit();
+        console.log("sen my promise", confirmed, received, requested);
+        res.send({ confirmed, received, requested });
+      }
     } else {
       recList.forEach(async (e) => {
         let element = {};
@@ -175,6 +184,7 @@ router.get("/promise", async (req, res, next) => {
         )[0];
         elements.forEach((el) => {
           element.userPk = e.userPk;
+          element.profileImg = e.profileImg;
           element.requestId = e.requestId;
           element.tripId = e.tripId;
           element.nickname = e.nickname;
@@ -184,19 +194,16 @@ router.get("/promise", async (req, res, next) => {
           element.city = el.city;
         });
         received.push(element);
-        console.log("received", received, received.length);
-        console.log("element1", element);
+        if (
+          received.length === recList.length &&
+          requested.length === reqList.length &&
+          confirmed.length === confirmTripList.length
+        ) {
+          await connection.commit();
+          console.log("sen my promise", confirmed, received, requested);
+          res.send({ confirmed, received, requested });
+        }
       });
-    }
-
-    if (
-      received.length === recList.length &&
-      requested.length === reqList.length &&
-      confirmed.length === confirmTripList.length
-    ) {
-      await connection.commit();
-      console.log("confirmed", confirmed);
-      res.send({ confirmed, received, requested });
     }
   } catch (err) {
     console.error(err);
@@ -462,8 +469,8 @@ router.patch("/reject_confirm", async (req, res, next) => {
 router.post("/make_promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { tripId, requestId, userPk } = req.body;
+    const { userPk } = res.locals.user;
+    const { tripId, requestId } = req.body;
     let setPartner;
 
     // 해당 여행의 주인 pk
@@ -482,7 +489,7 @@ router.post("/make_promise", async (req, res, next) => {
         )
       )
     )[0][0];
-    console.log(ownerPk, getPks.reqPk, getPks.recPk, getPks);
+    console.log(userPk, ownerPk, getPks.reqPk, getPks.recPk, getPks);
     if (userPk !== getPks.reqPk && userPk !== getPks.recPk) {
       throw new Error("나와 관련된 약속이 아닙니다");
     }

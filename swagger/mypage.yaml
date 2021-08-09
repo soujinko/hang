@@ -1,0 +1,258 @@
+paths:
+  /api/mypage:
+    get:
+      summary: Get my profile and trips
+      tags: [My Profile Page]
+      description: GET my profile and trips
+      responses:
+        200:
+          description: |
+            Success
+
+            Get my profile and trips
+          content:
+            application/json:
+             schema:
+                type: object
+                properties:
+                  userInfo:
+                    type: object
+                    properties:
+                      userPk: 
+                        type: number
+                      nickname: 
+                        type: string
+                      userId:
+                        type: number
+                      region:
+                        type: string
+                      city:
+                        type: string
+                      age:
+                        type: string
+                      gender:
+                        type: number
+                      guide:
+                        type: number
+                      profileImg:
+                        oneOf:
+                            - type: string
+                            - type: null
+                      intro:
+                        type: string
+                    example:
+                      userPk: 1
+                      nickname: sujin123
+                      userId: sujin123
+                      region: 서울
+                      city: 강남구 
+                      age: 20
+                      gender: 0
+                      guide: 0
+                  tripInfo:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tripId: 
+                          type: number
+                        userPk: 
+                          type: number
+                        region:
+                          type: string
+                        city:
+                          type: string
+                        startDate:
+                          type: date
+                        endDate:
+                          type: date
+                        tripInfo:
+                          type: string
+                        partner:
+                          oneOf:
+                            - type: number
+                            - type: null
+                      example:
+                        tripId: 2
+                        userPk: 3
+                        region: 서울
+                        city: 강남구
+                        startDate: 2021-06-12T00:00:00.000Z  
+                        endDate: 2021-06-14T00:00:00.000Z  
+                        tripInfo: 기대된당
+                        partner: 4            
+        400:
+          description: Cannot find my profile
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors
+
+  /api/mypage/promise:
+    get:
+      summary: Get my promise
+      tags: [My Promise Page]
+      description: Get my promise
+      responses:
+        200:
+          description: |
+            Success
+
+            Get my promise
+          content:
+            application/json:
+             schema:
+                type: object
+                properties:               
+                  confirmed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userPk: 
+                          type: number
+                        profileImg: 
+                          type: string
+                        tripId: 
+                          type: number
+                        guide:
+                          type: number
+                        nickname:
+                          type: string
+                        startDate:
+                          type: date
+                        endDate:
+                          type: date
+                        region:
+                          type: string
+                        city:
+                          type: string
+                      example:
+                        userPk: 2
+                        profileImg: random/url/path
+                        tripId: 3
+                        guide: 1
+                        nickname: sujin
+                        startDate: 2021-06-12T00:00:00.000Z  
+                        endDate: 2021-06-14T00:00:00.000Z  
+                        region: 서울
+                        city: 강남구      
+                  received:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userPk: 
+                          type: number
+                        profileImg: 
+                          type: string
+                        tripId: 
+                          type: number
+                        guide:
+                          type: number
+                        nickname:
+                          type: string
+                        startDate:
+                          type: date
+                        endDate:
+                          type: date
+                        region:
+                          type: string
+                        city:
+                          type: string
+                      example:
+                        userPk: 2
+                        profileImg: random/url/path
+                        tripId: 3
+                        guide: 1
+                        nickname: sujin
+                        startDate: 2021-06-12T00:00:00.000Z  
+                        endDate: 2021-06-14T00:00:00.000Z  
+                        region: 서울
+                        city: 강남구     
+                  requested:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userPk: 
+                          type: number
+                        profileImg: 
+                          type: string
+                        tripId: 
+                          type: number
+                        guide:
+                          type: number
+                        nickname:
+                          type: string
+                        startDate:
+                          type: date
+                        endDate:
+                          type: date
+                        region:
+                          type: string
+                        city:
+                          type: string
+                      example:
+                        userPk: 2
+                        profileImg: random/url/path
+                        tripId: 3
+                        guide: 1
+                        nickname: sujin
+                        startDate: 2021-06-12T00:00:00.000Z  
+                        endDate: 2021-06-14T00:00:00.000Z  
+                        region: 서울
+                        city: 강남구     
+        400:
+          description: Cannot find my profile
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors
+    # post:
+    #   summary: Add request guide
+    #   tags: [My Profile Page]
+    #   description: GET request guide
+      
+    #   responses:
+    #     201:
+    #       description: Success
+    #     400:
+    #       description: Cannot request
+    #     401:
+    #       description: Unauthorized
+    #     500:
+    #       description: internal server errors  
+      
+    #   parameters:
+    #     - name: pagePk
+    #       in: body
+    #       description: Unique PK of a user of page
+    #       type: number
+    #       required: true
+    #       example:
+    #         pagePk: 2
+
+    #     - name: tripId
+    #       in: body
+    #       description: Unique Id of trip
+    #       type: number
+    #       required: true
+    #       example:
+    #         tripId: 3
+
+    #     - name: startDate
+    #       in: body
+    #       description: Start date of trip
+    #       type: string
+    #       required: true
+    #       example:
+    #         startDate: "2021-08-07"
+
+    #     - name: endDate
+    #       in: body
+    #       description: End date of trip
+    #       type: string
+    #       required: true
+    #       example:
+    #         endDate: "2021-08-09"

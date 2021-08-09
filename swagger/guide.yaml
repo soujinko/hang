@@ -1,50 +1,98 @@
-# paths:
-#   /api/guide:
-#     get:
-#       summary: Get trip lists
-#       tags: [Guide Page]
-#       description: GET main page
-#       responses:
-#         200:
-#           description: |
-#             Success
+paths:
+  /api/guide:
+    get:
+      summary: Get trip lists
+      tags: [Guide Page]
+      description: GET main page
+      responses:
+        200:
+          description: |
+            Success
 
-#             Get user's trip lists
-#           content:
-#             application/json:
-#                 schema:
-#                 type: array
-#                 items:
-#                   type: object
-#                   properties:
-#                       tripId: 
-#                         type: number
-#                       userPk: 
-#                         type: number
-#                       region: 
-#                         type: string
-#                       city:
-#                         type: string
-#                       startDate:
-#                         type: date
-#                       endDate:
-#                         type: date
-#                       tripInfo:
-#                         type: string
-#                       partner:
-#                         type: null
-#                     example:
-#                       tripId: 1
-#                       userPk: 2
-#                       region: 서울
-#                       city: 강남구
-#                       startDate: 2021-06-12T00:00:00.000Z  
-#                       endDate: 2021-06-14T00:00:00.000Z  
-#                       tripInfo: 기대된당
-#                       partner: null
-                 
-                    
-#         401:
-#           description: Unauthorized
-#         500:
-#           description: internal server errors
+            Get user's trip lists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tripId: 
+                      type: number
+                    userPk: 
+                      type: number
+                    region: 
+                      type: string
+                    city:
+                      type: string
+                    startDate:
+                      type: date
+                    endDate:
+                      type: date
+                    tripInfo:
+                      type: string
+                    partner:
+                      type: number
+                  example:
+                    tripId: 1
+                    userPk: 2
+                    region: 서울
+                    city: 강남구
+                    startDate: 2021-06-12T00:00:00.000Z  
+                    endDate: 2021-06-14T00:00:00.000Z  
+                    tripInfo: 기대된당
+                    partner: 3
+                
+        400:
+          description: Cannot find trip lists
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors
+    post:
+      summary: Add request guide
+      tags: [Guide Page]
+      description: POST request guide
+      
+      responses:
+        201:
+          description: Success
+        400:
+          description: Cannot request
+        401:
+          description: Unauthorized
+        500:
+          description: internal server errors  
+      
+      parameters:
+        - name: pagePk
+          in: body
+          description: Unique PK of a user of page
+          type: number
+          required: true
+          example:
+            pagePk: 2
+
+        - name: tripId
+          in: body
+          description: Unique Id of trip
+          type: number
+          required: true
+          example:
+            tripId: 3
+
+        - name: startDate
+          in: body
+          description: Start date of trip
+          type: string
+          required: true
+          example:
+            startDate: "2021-08-07"
+
+        - name: endDate
+          in: body
+          description: End date of trip
+          type: string
+          required: true
+          example:
+            endDate: "2021-08-09"

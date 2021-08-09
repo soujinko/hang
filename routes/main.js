@@ -11,11 +11,13 @@ router.get("/", async (req, res) => {
   getConnection(async (conn) => {
     try {
       const { userPk } = res.locals.user;
+      // const { userPk } = req.params;
+      let myuserPk = userPk;
       let promise = {};
       let guide = [];
       let traveler = [];
-      const findTrip = `select * from trips where userPk=${userPk} AND partner is not NULL ORDER BY startDate ASC LIMIT 1`;
-      const findUsers = `select region from users where userPk = ${userPk}`;
+      const findTrip = `select * from trips where (userPk=${userPk} or partner=${userPk}) AND partner is not NULL ORDER BY startDate ASC  LIMIT 1`;
+      const findUsers = `select region from userView where userPk = ${userPk}`;
       conn.beginTransaction();
       // 확정된 내 여행정보 1개 가져오기
       conn.query(findTrip, (err, result) => {
@@ -25,11 +27,18 @@ router.get("/", async (req, res) => {
           next(err);
         }
         if (result.length > 0) {
+          console.log("나의 확정1", result);
           const { endDate } = result[0];
           const { startDate } = result[0];
           const { partner } = result[0];
+          const { userPk } = result[0];
+          let findUser;
+          if (partner !== myuserPk) {
+            findUser = `select * from userView where userPk='${partner}'`;
+          } else {
+            findUser = `select * from userView where userPk='${userPk}'`;
+          }
 
-          const findUser = `select * from userView where userPk='${partner}'`;
           // 나와 약속된 사람의 프로필 가져오기
           conn.query(findUser, (err, result) => {
             if (err) {
@@ -37,6 +46,7 @@ router.get("/", async (req, res) => {
               conn.rollback();
               next(err);
             }
+            console.log("확정 유저 ", result);
             const partnerImg = result[0].profileImg;
             const prtnerNick = result[0].nickname;
             promise.profileImg = partnerImg;
@@ -59,7 +69,7 @@ router.get("/", async (req, res) => {
         const searchRegion = result[0].region;
         console.log("찾는 지역", searchRegion);
         const findGuides = `select * from userView where region ='${searchRegion}' and guide=1 and userPk not in (${userPk}) ORDER BY RAND() LIMIT 3`;
-        const findTravelers = `select a.* from userView a left join trips b on a.userPk = b.userPk where b.region ='${searchRegion}' and b.partner is NULL Group by userPk ORDER BY RAND() LIMIT 3 `;
+        const findTravelers = `select a.* from userView a left join trips b on a.userPk = b.userPk where b.region ='${searchRegion}' and b.partner is NULL and a.userPk not in (${userPk}) Group by userPk ORDER BY RAND() LIMIT 3 `;
         const likeList = `select targetPk from likes where userPk=${userPk} `;
         // 내가 좋아요한 사람 리스트
         conn.query(likeList, (err, result) => {

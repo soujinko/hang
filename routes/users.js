@@ -7,7 +7,7 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-import redis from 'redis'
+import redis from "redis";
 
 dotenv.config();
 
@@ -16,41 +16,40 @@ const router = express.Router();
 
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
-    const { pNum: phoneNumber } = req.body;
-    getConnection((conn) => {
-      try {
-        conn.beginTransaction();
-        conn.query(
-          `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
-          (err, data) => {
-            if (err) throw err;
-            if (data.length > 0) return res.sendStatus(409);
-        
-            const authNumber = Math.floor(Math.random() * 90000) + 10000;
-            NC_SMS(req, next, authNumber);
-            // redis에 저장
-            client.set(phoneNumber, authNumber, 'EX', 60)
-            res.sendStatus(200);
-          } 
-        );
-        
-      } catch (err) {
-        conn.rollback();
-        next(err);
-      } finally {
-        conn.release();
-      }
-    });
+  const { pNum: phoneNumber } = req.body;
+  getConnection((conn) => {
+    try {
+      conn.beginTransaction();
+      conn.query(
+        `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
+        (err, data) => {
+          if (err) throw err;
+          if (data.length > 0) return res.sendStatus(409);
+
+          const authNumber = Math.floor(Math.random() * 90000) + 10000;
+          NC_SMS(req, next, authNumber);
+          // redis에 저장
+          client.set(phoneNumber, authNumber, "EX", 60);
+          res.sendStatus(200);
+        }
+      );
+    } catch (err) {
+      conn.rollback();
+      next(err);
+    } finally {
+      conn.release();
+    }
+  });
 });
 
 router.post("/p_auth", (req, res, next) => {
-  const { pNum:phoneNumber, aNum:authNumber } = req.body;
+  const { pNum: phoneNumber, aNum: authNumber } = req.body;
   // redis 데이터 불러와서 비교
   client.get(phoneNumber, (err, data) => {
-    if (err) next(err)
-    else if (data === authNumber) res.sendStatus(202)
-    else res.sendStatus(409)
-  })
+    if (err) next(err);
+    else if (data === authNumber) res.sendStatus(202);
+    else res.sendStatus(409);
+  });
 });
 
 router.post("/duplicate", (req, res, next) => {
@@ -120,10 +119,11 @@ router.post("/", (req, res, next) => {
           profileImg,
           gender,
           pNum,
-        ], (err, data) => {
+        ],
+        (err, data) => {
           if (err) {
-            conn.rollback()
-            next(err)
+            conn.rollback();
+            next(err);
           } else {
             conn.commit();
             res.sendStatus(201);
@@ -173,19 +173,20 @@ router.post("/signin", (req, res, next) => {
             conn.release();
           }
         });
-        
-        res.status(200)
-        .cookie("jwt", accessToken, {
-          httpOnly:true,
-          sameSite: "none",
-          secure: true,
-        })
-        .cookie("refresh", refreshToken, {
-          httpOnly:true,
-          sameSite: "none",
-          secure: true,
-        })
-        .json({accessToken});
+
+        res
+          .status(200)
+          .cookie("jwt", accessToken, {
+            // httpOnly:true,
+            sameSite: "none",
+            secure: true,
+          })
+          .cookie("refresh", refreshToken, {
+            // httpOnly:true,
+            sameSite: "none",
+            secure: true,
+          })
+          .json({ accessToken });
       });
     })(req, res);
   } catch {
@@ -193,22 +194,28 @@ router.post("/signin", (req, res, next) => {
   }
 });
 
-router.delete('/signout', verification, (req, res, next)=>{
+router.delete("/signout", verification, (req, res, next) => {
   try {
     res
-    .clearCookie('jwt',{ httpOnly:true, secure:true, sameSite:'none'})
-    .clearCookie('refresh',{ httpOnly:true, secure:true, sameSite:'none'})
-    .sendStatus(204)
-  }catch(err){
-    next(err)
+      .clearCookie("jwt", { httpOnly: true, secure: true, sameSite: "none" })
+      .clearCookie("refresh", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      })
+      .sendStatus(204);
+  } catch (err) {
+    next(err);
   }
-})
-
-router.get("/a", verification, (req, res) => {
-  res.status(200).json({status:true})
 });
 
-router.get("/b", asyncHandle(async (req, res, next) => {
+router.get("/a", verification, (req, res) => {
+  res.status(200).json({ status: true });
+});
+
+router.get(
+  "/b",
+  asyncHandle(async (req, res, next) => {
     throw new Error("사용자 정의 에러 발생");
   })
 );

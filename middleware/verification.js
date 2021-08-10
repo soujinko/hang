@@ -67,33 +67,36 @@ const verification = async (req, res, next) => {
       // 그리고 이 경우에는 refresh가 유효하지만 db와 대조했을때 다르다면 새로 발급해주어선 안됨! 사실상 jwt와 refresh 둘다 무효인 상황인 것임.
 
       // 기간 지난 jwt가 변형 되진 않았는지 검증. 변형되었다면 새로 로그인
-      
+      console.log('여기냐? 1')
       const expiredUser = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {ignoreExpiration:true})
       // refresh를 verify 후 DB와 대조. DB와 다르면 새로 로그인
-      
+      console.log('여기냐? 2')
       jwt.verify(req.cookies.refresh, process.env.PRIVATE_KEY, {algorithms:['HS512']})
       
-      
+      console.log('여기냐? 3')
       await connection.beginTransaction();
       const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk=${expiredUser.userPk}`)))[0][0].refreshToken
       
-      
+      console.log('여기냐? 4', DBRefreshToken, req.cookies.refresh)
       await connection.release()
       if (DBRefreshToken !== req.cookies.refresh) throw new Error()
       
       // (jwt 만료 && 변형되지 않음) && (refresh 유효 && 변형되지 않았을 때)
-      
+      console.log('여기냐? 5')
       const newAccessToken = jwt.sign(
 					{ userPk: expiredUser.userPk },
 					process.env.PRIVATE_KEY,
 					{ expiresIn: '3h', algorithm: 'HS512' }
 				);
-      
+      console.log('여기냐? 6')
       res.cookie('jwt', newAccessToken, { httpOnly:true, sameSite:'none', secure:true  })
       res.locals.user = expiredUser
+      console.log('여기냐? 7')
       next()
       
-    } catch {
+    } catch(err) {
+      console.error(err)
+      console.log('여기냐? 8')
       // 1.jwt와 refresh가 모두 expired되었거나, 
       // 2.jwt가 무효하고 refresh가 변형이 되었거나,
       // 3.jwt가 expired되었을 뿐 아니라 변형 되었을 경우, refresh의 유효성에 상관없이 새로 로그인

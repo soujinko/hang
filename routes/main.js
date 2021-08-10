@@ -1,15 +1,7 @@
 import express from "express";
-<<<<<<< HEAD
-import verification from "../middleware/verification.js";
-import { getConnection } from "../models/db.js";
-import searchAndPaginate from "../services/search_paginate.js";
-// import search from "../services/search_paginate.js";
-import asyncHandle from "../util/async_handler.js";
-=======
 import { getConnection } from "../models/db.js";
 import searchAndPaginate from '../functions/search_paginate.js';
 import asyncHandle from '../util/async_handler.js';
->>>>>>> fffa974bad2151c8ecba9e1ba7857e192d4db9c7
 
 const router = express.Router();
 

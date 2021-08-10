@@ -7,11 +7,11 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-import redis from 'redis'
+// import Redis from 'ioredis'
 
 dotenv.config();
 
-const client = redis.createClient();
+// const redis = new Redis(password:process.env.REDIS_PASSWORD);
 const router = express.Router();
 
 // pk, nick, profileImg전달
@@ -26,10 +26,10 @@ router.post("/sms_auth", (req, res, next) => {
             if (err) throw err;
             if (data.length > 0) return res.sendStatus(409);
         
-            const authNumber = Math.floor(Math.random() * 90000) + 10000;
-            NC_SMS(req, next, authNumber);
+            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
+            // NC_SMS(req, next, authNumber);
             // redis에 저장
-            client.set(phoneNumber, authNumber, 'EX', 60)
+            // redis.set(phoneNumber, authNumber, 'EX', 60)
             res.sendStatus(200);
           } 
         );
@@ -46,11 +46,12 @@ router.post("/sms_auth", (req, res, next) => {
 router.post("/p_auth", (req, res, next) => {
   const { pNum:phoneNumber, aNum:authNumber } = req.body;
   // redis 데이터 불러와서 비교
-  client.get(phoneNumber, (err, data) => {
-    if (err) next(err)
-    else if (data === authNumber) res.sendStatus(202)
-    else res.sendStatus(409)
-  })
+  // redis.get(phoneNumber, (err, data) => {
+  //   if (err) next(err)
+  //   else if (data === authNumber) res.sendStatus(202)
+  //   else res.sendStatus(409)
+  // })
+  res.sendStatus(200)
 });
 
 router.post("/duplicate", (req, res, next) => {
@@ -196,8 +197,8 @@ router.post("/signin", (req, res, next) => {
 router.delete('/signout', verification, (req, res, next)=>{
   try {
     res
-    .clearCookie('jwt',{ httpOnly:true, secure:true, sameSite:'none'})
-    .clearCookie('refresh',{ httpOnly:true, secure:true, sameSite:'none'})
+    .clearCookie('jwt',{  httpOnly:true, secure:true, sameSite:'none'})
+    .clearCookie('refresh',{  httpOnly:true, secure:true, sameSite:'none'})
     .sendStatus(204)
   }catch(err){
     next(err)

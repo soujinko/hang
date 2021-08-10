@@ -13,8 +13,6 @@ import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
 import https from "https";
-import DBCleaner from "./util/db_cleaner.js";
-import keepAlive from "./models/scripts/procedures_events.js";
 // import webSocket from "./websocket.js";
 
 const app = express();
@@ -22,7 +20,11 @@ const app = express();
 dotenv.config();
 
 const corsOption = {
-  origin: ["https://localhost:3000", "https://seunggyulee.shop"],
+  origin: [
+    "https://localhost:3000",
+    "https://seunggyulee.shop",
+    "https://hanging.kr",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };

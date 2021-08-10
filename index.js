@@ -14,6 +14,7 @@ import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
 import https from "https";
 import DBCleaner from "./util/db_cleaner.js";
+import keepAlive from "./models/scripts/procedures_events.js";
 // import webSocket from "./websocket.js";
 
 const app = express();
@@ -49,10 +50,12 @@ const options = {
 
 const server = http.createServer(app);
 
+setInterval(keepAlive, 60 * 240 * 1000);
+
 server.listen(3000, () => {
   console.log("서버 연결 성공");
 });
 https.createServer(options, app).listen(443);
-webSocket(server);
+// webSocket(server);
 
 export { server, app };

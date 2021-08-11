@@ -21,7 +21,7 @@ router.post("/sms_auth", (req, res, next) => {
       try {
         conn.beginTransaction();
         conn.query(
-          `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
+          `SELECT pNum FROM users WHERE pNum=?`, [phoneNumber], 
           (err, data) => {
             if (err) throw err;
             if (data.length > 0) return res.sendStatus(409);

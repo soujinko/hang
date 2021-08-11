@@ -58,12 +58,6 @@ server.listen(3000, () => {
   console.log("서버 연결 성공");
 });
 
-const server2 = https.createServer(options, app);
+https.createServer(options, app).listen(443);
 
-server2.listen(443, () => {
-  console.log("서버 연결 성공2");
-});
-// https.createServer(options, app).listen(443);
-// webSocket(server);
-
-export { server, app, server2 };
+export { server, app };

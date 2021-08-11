@@ -54,22 +54,47 @@ export default keepAlive;
 // mysql -u [사용자 계정] -p [복원할 DB ] < [백업된 테이블].sql
 
 // 모든 db 백업
-// mysqldump -A-databases -u [사용자 계정] -p --default-character-set=euckr < [백업된 DB].sql
-// mysql -A-databases -u [사용자 계정] -p < [백업된 DB].sql
 
-// 매일 새벽 한시에 저장하도록 설정 https://opensrc.tistory.com/211
-/* #!/bin/bash 
-echo "[$(date +%Y-%m-%d) $(date +%H:%M:%S)] start backup" 
-export backup_file_name="MySystem_db_backup_$(date +%Y%m%d)" 
-echo "[$(date +%Y-%m-%d) $(date +%H:%M:%S)] start backup" 
-#echo ${backup_file_name} 
-echo "[$(date +%Y-%m-%d) $(date +%H:%M:%S)] daily backup start dump : ${backup_file_name}" 
-/usr/bin/mysqldump -uDBUSERID -pDBUSERPW DBNAME > /usr/local/backup/mysql/${backup_file_name}.sql 
-echo "[$(date +%Y-%m-%d) $(date +%H:%M:%S)] daily backup compress : ${backup_file_name}.sql to ${backup_file_name}.sql.tar.gz" 
-/usr/bin/tar cvfpzR /usr/local/backup/mysql/${backup_file_name}.tar.gz /usr/local/backup/mysql/${backup_file_name}.sql 
-echo "[$(date +%Y-%m-%d) $(date +%H:%M:%S)] daily backup delete dump : ${backup_file_name}.sql" 
-/usr/bin/rm /usr/local/backup/mysql/${backup_file_name}.sql 
-echo "[$(date +%Y-%m-%d) $(date +%H:%M:%S)] end backup successfully" */
+// --------------------------------------------------------------------
+// mysqldump MySQL db 백업
+// mysqldump 쉘스크립트를 사용하여 crontab으로 백업 자동화
+// mysqldump 백업 방법은 InnoDB엔진에 한해
+//  핫 백업 / 논리백업 방식 지원 -> (데이터 베이스 서버 중지 않고 실시간 백업, 디스크 용량 추가 필요,
+//                                    각 오브젝트를 SQL 문으로 저장하여 백업, 복원 시의 안정성 증가,
+//                                    백업과 복원 속도가 느림, 다른 서버간 데이터 이전 용이 등)
+// 백업 방식 및 특징 -> https://jootc.com/p/201806231313
+// 데이터가 많다면 mysqldump 백업은 부적합하다.
+
+// 백업절차
+//  0. login-path 등록
+//     mysql 버전 5.7이후에는 보안규정이 바뀌어 파일에 password 사용 불가 -> login-path를 활용하자
+//     mysql_config_editor set --login-path=[아무 명칭] --host=localhost --user=root --password
+//     Enter password: 비밀번호는 "" 안에 입력
+
+//  1. 쉘스크립트 작성
+//    #!/bin/sh
+//    export MYSQL_TEST_LOGIN_FILE=/home/ubuntu/.mylogin.cnf  /
+//    login-path를 등록하면, 자동으로 mylogin.cnf생성된다. 위치를 찾아 export 해주자(안하면 crontab 실행시 인증 오류)
+
+//    DATE=date +"%Y%m%d"
+//    PREV_DATE=date --date '5 days ago' +"%Y%m%d"
+//    /usr/bin/mysqldump --login-path=hanging --single-transaction hang > /backup/mysql_db_bak_${DATE}.sql
+//    / mysqldump 절대경로로 써줘야 한다. login-path로 -u root -p를 대체, 트랜젝션이나 다양한 명령어 추가 가능
+
+//    chmod 755  /backup/mysql_db_bak_${DATE}.sql
+//    chown root.root /data/backup/backupdb_${DATE}.sql
+//    rm -rf /data/backup/backupdb_${PREV_DATE}.sql  / 5일 후 삭제
+
+//  2. #chmod 100 backup.sh / 변경방지 위해 생성자한테만 실행권한 주기
+//  3. /root/backup.sh / 터미널에 다음 입력하여 스크립트 실행, 파일 생성되고 mysqldump를 가져왔다면 성공
+//  4. 크론 등록
+//      #crontab -e
+//      00 04 * * * /root/backup.sh
+//                  /root/backup.sh >> /root/logs/file.log 2>&1    / 다음과 같이  >> 파일경로 입력하고 2>&1기입하면 에러로그 저장, 확인 가능
+
+//  5. 크론 데몬 재실행 (리눅스 시간 동기화 필요 / 시간 점점 느려지기 때문에 주기적으로 자동 동기화 필요)
+//     /etc/init.d/cron restart
+// --------------------------------------------------------------------
 
 // https://programmerdaddy.tistory.com/137 < 여기가 훨씬 간단한듯?
 

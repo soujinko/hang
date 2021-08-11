@@ -7,11 +7,7 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-<<<<<<< HEAD
-import redis from "redis";
-=======
 // import Redis from 'ioredis'
->>>>>>> chat
 
 dotenv.config();
 
@@ -20,31 +16,30 @@ const router = express.Router();
 
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
-    const { pNum: phoneNumber } = req.body;
-    getConnection((conn) => {
-      try {
-        conn.beginTransaction();
-        conn.query(
-          `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
-          (err, data) => {
-            if (err) throw err;
-            if (data.length > 0) return res.sendStatus(409);
-        
-            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
-            // NC_SMS(req, next, authNumber);
-            // redis에 저장
-            // redis.set(phoneNumber, authNumber, 'EX', 60)
-            res.sendStatus(200);
-          } 
-        );
-        
-      } catch (err) {
-        conn.rollback();
-        next(err);
-      } finally {
-        conn.release();
-      }
-    });
+  const { pNum: phoneNumber } = req.body;
+  getConnection((conn) => {
+    try {
+      conn.beginTransaction();
+      conn.query(
+        `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
+        (err, data) => {
+          if (err) throw err;
+          if (data.length > 0) return res.sendStatus(409);
+
+          // const authNumber = Math.floor(Math.random() * 90000) + 10000;
+          // NC_SMS(req, next, authNumber);
+          // redis에 저장
+          // redis.set(phoneNumber, authNumber, 'EX', 60)
+          res.sendStatus(200);
+        }
+      );
+    } catch (err) {
+      conn.rollback();
+      next(err);
+    } finally {
+      conn.release();
+    }
+  });
 });
 
 router.post("/p_auth", (req, res, next) => {
@@ -55,7 +50,7 @@ router.post("/p_auth", (req, res, next) => {
   //   else if (data === authNumber) res.sendStatus(202)
   //   else res.sendStatus(409)
   // })
-  res.sendStatus(200)
+  res.sendStatus(200);
 });
 
 router.post("/duplicate", (req, res, next) => {
@@ -203,11 +198,15 @@ router.post("/signin", (req, res, next) => {
 router.delete("/signout", verification, (req, res, next) => {
   try {
     res
-    .clearCookie('jwt',{  httpOnly:true, secure:true, sameSite:'none'})
-    .clearCookie('refresh',{  httpOnly:true, secure:true, sameSite:'none'})
-    .sendStatus(204)
-  }catch(err){
-    next(err)
+      .clearCookie("jwt", { httpOnly: true, secure: true, sameSite: "none" })
+      .clearCookie("refresh", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      })
+      .sendStatus(204);
+  } catch (err) {
+    next(err);
   }
 });
 

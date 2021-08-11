@@ -1,21 +1,13 @@
-// import { server2 } from "./index.js";
-// // import { readFileSync } from "fs";
-// import { WebSocketServer } from "ws";
-
 import { server } from "./index.js";
 import redisAdapter from '@socket.io/redis-adapter';
-import socketIo from "socket.io";
 
-const io = socketIo(server, {
-  cors: {
-    origin: "*",
-  },
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 const pubClient = new Redis({password:process.env.REDIS_PASSWORD});
 const subClient = pubClient.duplicate();
 io.adapter(redisAdapter(pubClient, subClient));
 
+// 로그인 할 때 유저 정보 받아서 socket id와 함께 저장하기
 let users = [];
 io.sockets.on("connection", (socket) => {
   console.log("확인용 로그: 알람용 소켓 연결됨");
@@ -23,7 +15,8 @@ io.sockets.on("connection", (socket) => {
   socket.on("login", (user) => {
     console.log("로그인 소켓 연결");
     console.log("로그인 유저, 소켓아이디", user, socket.id);
-    let userInfo = new Object();
+    let userInfo = {}
+    // user.uid 는 클라이언트에서 보내준 userPk
     userInfo.uid = user.uid;
     userInfo.id = socket.id;
     users.push(userInfo)
@@ -31,18 +24,22 @@ io.sockets.on("connection", (socket) => {
 
   socket.on("request", (data) => {
     console.log("data", data)
+    //  data.uid 는 클라이언트에서 보내준 타겟의 userPk
       users.forEach(e=> {
         let user = e.uid
         let userSocketId = e.id
         console.log('찾고있음', user )
+        // 타겟유저가 현재 접속중이면  해당 소켓으로 전달
         if (user === data.uid){
         console.log('타겟 유저 찾음',user )
-        io.sockets.socket(userSocketId).send(data.msg);
+        io.sockets.to(userSocketId).emit('requested', true)
+        // io.sockets.socket(userSocketId).send(data.msg);
         break;
         }
       })
     })
 
+//  로그아웃 혹은 앱 웹 끄면 소켓 삭제
     socket.on("disconnect", (data) => {
       console.log("disconnect", data)
         users.forEach(e=> {
@@ -56,56 +53,4 @@ io.sockets.on("connection", (socket) => {
         })
       })
 })
-
-
-
-// const webSocket = (server2) => {
-//   const wss = new WebSocketServer({ server2 });
-//   let users = [];
-//   wss.on("connection", (ws, req) => {
-//     // 웹 소켓 연결 시
-//     console.log("서버 소켓 연결");
-
-//     ws.on("login", (user) => {
-//       console.log("로그인 소켓 연결");
-//       console.log("로그인 유저, 소켓아이디", user, ws.id);
-//       let userInfo = new Object();
-//       userInfo.uid = data.uid;
-//       userInfo.id = ws.id
-//     });
-
-//     ws.on("request", (data) => {
-//       console.log("data", data)
-//       users.forEach(e=> {
-//         let user = e.uid
-//         let userSocketId = e.id
-//         console.log('찾고있음',user )
-//         if (user === data.uid){
-//         console.log('타겟 유저 찾음',user )
-//           userSocketId.send("received");
-//           break
-//         }
-//       })
-//     });
-
-//     ws.on("error", (error) => {
-//       // 에러 시
-//       console.error(error);
-//     });
-
-//     ws.on("close", () => {
-//       // 연결 종료 시
-//       console.log("클라이언트 접속 해제", ip);
-//       clearInterval(ws.interval);
-//     });
-
-//     // ws.interval = setInterval(() => {
-//     //   // 3초마다 클라이언트로 메시지 전송
-//     //   if (ws.readyState === ws.OPEN) {
-//     //     ws.send("서버에서 클라이언트로 메시지를 보냅니다.");
-//     //   }
-//     // }, 3000);
-
-//   });
-// };
 

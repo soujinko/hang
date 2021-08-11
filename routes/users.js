@@ -21,7 +21,8 @@ router.post("/sms_auth", (req, res, next) => {
     try {
       conn.beginTransaction();
       conn.query(
-        `SELECT pNum FROM users WHERE pNum='${phoneNumber}'`,
+        `SELECT pNum FROM users WHERE pNum=?`,
+        [phoneNumber],
         (err, data) => {
           if (err) throw err;
           if (data.length > 0) return res.sendStatus(409);
@@ -56,12 +57,13 @@ router.post("/p_auth", (req, res, next) => {
 router.post("/duplicate", (req, res, next) => {
   const { userId, nickname } = req.body;
   const sequel = userId
-    ? `SELECT userPk FROM users WHERE userId='${userId}'`
-    : `SELECT userPk FROM users WHERE nickname='${nickname}'`;
+    ? `SELECT userPk FROM users WHERE userId=?`
+    : `SELECT userPk FROM users WHERE nickname=?`;
+  const input = userId ?? nickname;
   getConnection((conn) => {
     try {
       conn.beginTransaction();
-      conn.query(sequel, function (err, data) {
+      conn.query(sequel, [input], function (err, data) {
         if (err) {
           throw err;
         } else if (data.length > 0) {
@@ -163,9 +165,10 @@ router.post("/signin", (req, res, next) => {
         getConnection((conn) => {
           try {
             conn.beginTransaction();
-            conn.query(
-              `UPDATE users SET refreshToken=? WHERE userPk=?`
-            , [refreshToken, user.userPk]);
+            conn.query(`UPDATE users SET refreshToken=? WHERE userPk=?`, [
+              refreshToken,
+              user.userPk,
+            ]);
             conn.commit();
           } catch (err) {
             conn.rollback();
@@ -178,12 +181,12 @@ router.post("/signin", (req, res, next) => {
         res
           .status(200)
           .cookie("jwt", accessToken, {
-            httpOnly:true,
+            httpOnly: true,
             sameSite: "none",
             secure: true,
           })
           .cookie("refresh", refreshToken, {
-            httpOnly:true,
+            httpOnly: true,
             sameSite: "none",
             secure: true,
           })

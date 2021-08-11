@@ -1,4 +1,6 @@
 import { server } from "./index.js";
+import { Server } from "socket.io";
+
 import redisAdapter from '@socket.io/redis-adapter';
 
 const io = new Server(server, { cors: { origin: "*" } });

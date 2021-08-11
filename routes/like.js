@@ -3,9 +3,6 @@ import express from "express";
 
 const router = express.Router();
 
-router.use(verification())
-router.use(alarms())
-
 // 좋아요
 router.get("/", async (req, res, next) => {
   getConnection(async (conn) => {

@@ -57,12 +57,13 @@ router.post("/p_auth", (req, res, next) => {
 router.post("/duplicate", (req, res, next) => {
   const { userId, nickname } = req.body;
   const sequel = userId
-    ? `SELECT userPk FROM users WHERE userId='${userId}'`
-    : `SELECT userPk FROM users WHERE nickname='${nickname}'`;
+    ? `SELECT userPk FROM users WHERE userId=?`
+    : `SELECT userPk FROM users WHERE nickname=?`;
+  const input = userId ?? nickname
   getConnection((conn) => {
     try {
       conn.beginTransaction();
-      conn.query(sequel, function (err, data) {
+      conn.query(sequel, [input], function (err, data) {
         if (err) {
           throw err;
         } else if (data.length > 0) {

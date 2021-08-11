@@ -4,3 +4,4 @@ node_modules
 test/t.js
 routes/.bash_history
 .gitignore
+db_config.js

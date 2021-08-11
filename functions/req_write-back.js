@@ -17,16 +17,18 @@ const requestsWriteBack = (userPk ,next) => {
   } else {
     redis.smembers('requests', (err, cachedKeys) => {
       if (err) return next(err)
-      let sequel = `INSERT INTO requests(tripId, reqPk, recPk) VALUES(${tripId}, ${reqPk}, ${recPk})`
+      let sequel = `INSERT INTO requests(tripId, reqPk, recPk) VALUES(?, ?, ?)`
+      let insertData = [tripId, reqPk, recPk]
       for (let v of cachedKeys) {
         const pivot = cachedKeys.length - 1
         redis.lrange(v, 0, -1, (err, reqData) => {
           if (err) return next(err)
-          sequel += `, (${reqData[0]}, ${reqData[1]}, ${reqData[2]})`
+          sequel += `, (?, ?, ?)`
+          insertData.concat([reqData[0], reqData[1], reqData[2]])
           if (+i === pivot) {
             getConnection((conn) => {
               try{
-                conn.query(sequel)
+                conn.query(sequel, insertData)
               } catch(err) {
                 conn.rollback()
                 next(err)

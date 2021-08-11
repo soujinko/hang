@@ -41,10 +41,11 @@ const requestsWriteBackAndQuery = async (userPk, next) => {
             // 문자열 연산을 실행하기 위한 시작점을 위해 첫 번째 데이터를 sequel문 안에 포함시키고 시작함
             redis.lrange(cachedKeys[0], (err, start) => {
               if (err) return next(err)
-              let sequel = `INSERT INTO requests(tripId, reqPk, recPk) VALUES(${start[0][0]}, ${start[0][1]}, ${start[0][2]})`
+              let sequel = `INSERT INTO requests(tripId, reqPk, recPk) VALUES(?, ?, ?)`
+              let cachedData = [start[0][0], start[0][1], start[0][2]]
               // 캐쉬에 저장된 데이터 갯수가 1이었을 경우 : 위 sequel 그대로 실행하고 끝내면 됨
               if (cachedKeys.length === 1) {
-                conn.query(sequel)
+                conn.query(sequel, cachedData)
                 conn.commit()
               // 캐쉬에 저장된 데이터 갯수가 2 이상일 경우
               } else {
@@ -52,10 +53,11 @@ const requestsWriteBackAndQuery = async (userPk, next) => {
                 for (let [i,key] of Object.entries(cachedKeys.slice(1))) {
                   redis.lrange(key, 0, -1, (err, reqData) => {
                     if (err) return next(err)
-                    sequel += `, (${reqData[0]}, ${reqData[1]}, ${reqData[2]})`
+                    sequel += `, (?, ?, ?)`
+                    cachedData.concat([reqData[0], reqData[1], reqData[2]])
                     // +i와 pivot이 같은 경우란 cachedKeys를 끝까지 돌았다는 것이다. sequel에 ,(...)문자열을 더한 상태가 유지되려면 이 block내에서 끝내야 하기때문에 어쩔 수 없음
                     if (+i === pivot) {
-                      conn.query(sequel)
+                      conn.query(sequel, cachedData)
                       conn.commit()
                     }
                   })
@@ -82,7 +84,6 @@ const requestsWriteBackAndQuery = async (userPk, next) => {
       if (err) return next(err)
       redis.unlink(data)
     })
-  
 }
 
 export default requestsWriteBackAndQuery

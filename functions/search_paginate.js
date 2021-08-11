@@ -36,23 +36,25 @@ const searchAndPaginate = async (req, userPk, next) => {
   const { keyword, region, city, traveler, guide, pageNum } = req.body;
   try {
     await connection.beginTransaction();
-
+    
     let sequel = `SELECT a.userPk, nickname, age, gender, region, city, profileImg, 
                  CASE WHEN a.userPk IN 
-                 (SELECT targetPk FROM likes WHERE userPk=${userPk}) 
+                 (SELECT targetPk FROM likes WHERE userPk= ?) 
                  THEN 1 ELSE 0 END 'like'
                  FROM (SELECT userPk FROM users`;
+    let inputs = [userPk]
 
     if (keyword || region || city || guide || traveler) {
       sequel += ` WHERE`;
       if (keyword)
-        sequel += ` MATCH(nickname) AGAINST('*${keyword}*' IN BOOLEAN MODE)`;
+        sequel += ` MATCH(nickname) AGAINST('*?*' IN BOOLEAN MODE)`;
+        inputs.push(keyword)
 
       const options = [region, city, guide, traveler];
       const sequelAddOns = [
-        ` region='${region}'`,
-        ` city='${city}'`,
-        ` guide=${guide}`,
+        ` region=?`,
+        ` city=?`,
+        ` guide=?`,
         ` userPk IN (SELECT userPk FROM trips)`,
       ];
 
@@ -61,13 +63,15 @@ const searchAndPaginate = async (req, userPk, next) => {
           if (sequel.slice(sequel.length - 5) === "WHERE")
             sequel += sequelAddOns[i];
           else sequel += " AND" + sequelAddOns[i];
+          if (i < 3) inputs.push(options[i])
       }
     }
 
-    sequel += ` LIMIT ${
-      (10 * (pageNum - 1) && 10 * (pageNum - 1) > 0 && 10 * (pageNum - 1)) || 0
-    }, 10) a JOIN users b ON a.userPk = b.userPk`;
-    const data = await connection.query(sequel);
+    sequel += ` LIMIT ?, 10) a JOIN users b ON a.userPk = b.userPk`;
+    pageNum = 10 * (pageNum - 1) && 10 * (pageNum - 1) > 0 && 10 * (pageNum - 1) || 0
+    inputs.push(pageNum)
+    
+    const data = await connection.query(sequel, inputs);
     await connection.release(); // return이 있어서 finally가 실행 안될까봐 넣어 둠
     return JSON.parse(JSON.stringify(data[0]));
   } catch (err) {

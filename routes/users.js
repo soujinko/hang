@@ -7,11 +7,7 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-<<<<<<< HEAD
-import redis from "redis";
-=======
 // import Redis from 'ioredis'
->>>>>>> chat
 
 dotenv.config();
 
@@ -169,8 +165,8 @@ router.post("/signin", (req, res, next) => {
           try {
             conn.beginTransaction();
             conn.query(
-              `UPDATE users SET refreshToken='${refreshToken}' WHERE userPk='${user.userPk}'`
-            );
+              `UPDATE users SET refreshToken=? WHERE userPk=?`
+            , [refreshToken, user.userPk]);
             conn.commit();
           } catch (err) {
             conn.rollback();
@@ -183,12 +179,12 @@ router.post("/signin", (req, res, next) => {
         res
           .status(200)
           .cookie("jwt", accessToken, {
-            // httpOnly:true,
+            httpOnly:true,
             sameSite: "none",
             secure: true,
           })
           .cookie("refresh", refreshToken, {
-            // httpOnly:true,
+            httpOnly:true,
             sameSite: "none",
             secure: true,
           })

@@ -39,13 +39,13 @@ router.post("/", async (req, res, next) => {
       e.userPk,
       e.partner,
     ]);
-    console.log("checkTripDate1", checkTripDate);
+    // console.log("checkTripDate1", checkTripDate);
     let startMyDate = Date.parse(checkTripDate[0][0]);
     let endMyDate = Date.parse(checkTripDate[0][1]);
     let pagePk = checkTripDate[0][2];
     let partner = checkTripDate[0][3];
 
-    console.log("checkTripDate", checkTripDate, startMyDate, endMyDate, pagePk);
+    // console.log("checkTripDate", checkTripDate, startMyDate, endMyDate, pagePk);
 
     const checkExistRequest = JSON.parse(
       JSON.stringify(
@@ -81,7 +81,7 @@ router.post("/", async (req, res, next) => {
         e["left(startDate, 10)"],
         e["left(endDate, 10)"],
       ]);
-      console.log("userTripDates2", userTripDates2);
+      // console.log("userTripDates2", userTripDates2);
 
       let count = 0;
       userTripDates2.forEach((e) => {
@@ -95,7 +95,7 @@ router.post("/", async (req, res, next) => {
           throw new Error("해당 날짜에 이미 약속이 있어요3");
         } else {
           count += 1;
-          console.log("count", count);
+          // console.log("count", count);
         }
       });
       // 리퀘스트 등록하기

@@ -31,7 +31,7 @@ router.get("/", async (req, res, next) => {
               // next(err);
             }
             let tripInfo = Object.values(JSON.parse(JSON.stringify(result)));
-            console.log("나의 여행 리스트", tripInfo);
+            // console.log("나의 여행 리스트", tripInfo);
 
             res.send({ userInfo, tripInfo });
           }
@@ -68,7 +68,7 @@ router.get("/promise", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("confirmTripList.length", confirmTripList.length);
+    // console.log("confirmTripList.length", confirmTripList.length);
     if (confirmTripList.length === 0) {
       confirmed = [];
     } else {
@@ -124,7 +124,7 @@ router.get("/promise", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("reqList.length", reqList.length);
+    // console.log("reqList.length", reqList.length);
     if (reqList.length === 0) {
       requested = [];
     } else {
@@ -159,7 +159,7 @@ router.get("/promise", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("recList.length", recList.length);
+    // console.log("recList.length", recList.length);
 
     if (recList.length === 0) {
       received = [];
@@ -169,7 +169,7 @@ router.get("/promise", async (req, res, next) => {
         confirmed.length === confirmTripList.length
       ) {
         await connection.commit();
-        console.log("sen my promise", confirmed, received, requested);
+        // console.log("sen my promise", confirmed, received, requested);
         res.send({ confirmed, received, requested });
       }
     } else {
@@ -200,7 +200,7 @@ router.get("/promise", async (req, res, next) => {
           confirmed.length === confirmTripList.length
         ) {
           await connection.commit();
-          console.log("sen my promise", confirmed, received, requested);
+          // console.log("sen my promise", confirmed, received, requested);
           res.send({ confirmed, received, requested });
         }
       });
@@ -223,15 +223,15 @@ router.post("/create_trip", async (req, res, next) => {
     // const { userPk } = req.params;
     const { userPk } = res.locals.user;
     const { region, city, startDate, endDate, tripInfo } = req.body;
-    console.log(
-      "등록 정보",
-      userPk,
-      region,
-      city,
-      startDate,
-      endDate,
-      tripInfo
-    );
+    // console.log(
+    //   "등록 정보",
+    //   userPk,
+    //   region,
+    //   city,
+    //   startDate,
+    //   endDate,
+    //   tripInfo
+    // );
     // let saveMyTrip = `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`;
     let startNewDate = Date.parse(startDate);
     let endNewDate = Date.parse(endDate);
@@ -260,14 +260,14 @@ router.post("/create_trip", async (req, res, next) => {
         e["left(startDate, 10)"],
         e["left(endDate, 10)"],
       ]);
-      console.log("내 약속 여행 리스트", myTripDates2);
+      // console.log("내 약속 여행 리스트", myTripDates2);
 
       // 만약 내 여행일정과 겹치면 에러
       let count = 0;
       myTripDates2.forEach((e) => {
         let startOld = Date.parse(e[0]);
         let endOld = Date.parse(e[1]);
-        console.log("start, end date", startOld, endOld);
+        // console.log("start, end date", startOld, endOld);
         if (startNewDate > startOld && startNewDate < endOld) {
           throw new Error("날짜 겹침1");
         } else if (endNewDate > startOld && endNewDate < endOld) {
@@ -489,7 +489,7 @@ router.post("/make_promise", async (req, res, next) => {
         )
       )
     )[0][0];
-    console.log(userPk, ownerPk, getPks.reqPk, getPks.recPk, getPks);
+    // console.log(userPk, ownerPk, getPks.reqPk, getPks.recPk, getPks);
     if (userPk !== getPks.reqPk && userPk !== getPks.recPk) {
       throw new Error("나와 관련된 약속이 아닙니다");
     }

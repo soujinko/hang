@@ -12,9 +12,9 @@ router.get("/", async (req, res, next) => {
 
       const { userPk } = res.locals.user;
       // const { userPk } = req.params;
-      const findMyTrip = `select * from trips where userPk ='${userPk}' and partner is NULL`;
+      const findMyTrip = `select * from trips where userPk =? and partner is NULL`;
       // 해당 페이지 유저의 프로필 정보 가져오기
-      conn.query(findMyTrip, function (err, result) {
+      conn.query(findMyTrip, [userPk], function (err, result) {
         if (err) {
           console.error(err);
           // 빈값일 때 에러처리
@@ -22,7 +22,7 @@ router.get("/", async (req, res, next) => {
           next(err);
         }
         // console.log("나의 여행정보", result);
-        console.log("result", result);
+        // console.log("result", result);
         Object.values(JSON.parse(JSON.stringify(result))).forEach((e) => {
           tripInfo.push(e);
         });
@@ -87,7 +87,7 @@ router.post("/", async (req, res, next) => {
         )
       )
     )[0].map((e) => [e["left(startDate, 10)"], e["left(endDate, 10)"]]);
-    console.log("userTripDates", userTripDates);
+    // console.log("userTripDates", userTripDates);
 
     let count = 0;
     userTripDates.forEach((e) => {

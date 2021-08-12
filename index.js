@@ -12,6 +12,7 @@ import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
 import https from "https";
+import http from "http";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
 
@@ -19,16 +20,17 @@ import keepAlive from "./models/scripts/procedures_events.js";
 
 const app = express();
 
-const options = {
-  // letsencrypt로 받은 인증서 경로를 입력
-  ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
-  key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
-  requestCert: false,
-  rejectUnauthorized: false,
-};
+// const options = {
+//   // letsencrypt로 받은 인증서 경로를 입력
+//   ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
+//   key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
+//   cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
+//   requestCert: false,
+//   rejectUnauthorized: false,
+// };
 
-const server = https.createServer(options, app);
+const server = http.createServer(app);
+// const server = http.createServer(app);
 
 dotenv.config();
 

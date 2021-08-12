@@ -22,14 +22,14 @@ io.sockets.on('connection', (socket) => {
   socket.on('join', async (data) => {
     const { joiningUserPk, targetUserPk, nickname } = data;
     socket.username = nickname
-    const roomName = 'room' +
+    const roomName = 
       joiningUserPk < targetUserPk && 
       `${joiningUserPk}:${targetUserPk}` || 
       `${targetUserPk}:${joiningUserPk}`;
     
       redis.lrange(roomName, 0, -1, (err, chatLogs) => {
         if (err) return io.use((sock, next) => next(err))
-        io.to(roomName).emit('chatLogs', chatLogs);
+        io.to(roomName).emit('chatLogs', {userPk:joiningUserPk, targetPk: targetUserPk, chatLogs: chatLogs});
     })
       
     // remoteJoin 파라미터가 무조건 string이라서 문자열로 변환
@@ -44,7 +44,7 @@ io.sockets.on('connection', (socket) => {
     // 방에 혼자 있다면
     if (await io.of('/').adapter.sockets(new Set(roomName)).size < 2) {
       // 방이 없었다면 상대방의 sorted set에 생성되고, 있었다면 읽지 않은 채팅마다 + 1
-      redis.zadd(targetPk,'INCR', 1, roomName)
+      redis.zadd(targetPk+'','INCR', 1, roomName)
       // 특정 소켓에게 new message이벤트 발송
       const target = users.targetPk?.socketId
       if (target)
@@ -60,9 +60,10 @@ io.sockets.on('connection', (socket) => {
   });
 
   socket.on('leave', (data) => {
+    const { userPk, roomName } = data
     pipeline
       // 자신이 방금 나온 방의 읽지 않은 갯수는 0으로
-      .zadd(userPk, 0, roomName)
+      .zadd(userPk+'', 0, roomName)
       // 메세지 100개로 제한. 채팅 하나당 3개씩 저장되니까 300요소로 제한
       .ltrim(roomName, 0, 300)
       // 마지막 채팅으로 부터 3일간 유지
@@ -77,10 +78,10 @@ io.sockets.on('connection', (socket) => {
   })
 
   socket.on('quit', (data) => {
-    const { roomName } = data
+    const { userPk, roomName } = data
     // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터도 삭제.
     multi
-      .zrem(userPk, roomName)
+      .zrem(userPk+'', roomName)
       .unlink(roomName)
       .exec((err, result) => {
         if (err) return io.use((sock, next) => next(err))

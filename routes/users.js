@@ -254,9 +254,10 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
   } finally {
     await connection.release()
   }
-  
+
   res.status(200).json({result})
 }))
+
 
 router.get("/a", verification, (req, res) => {
   res.status(200).json({ status: true });

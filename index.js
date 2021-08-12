@@ -20,14 +20,14 @@ import keepAlive from "./models/scripts/procedures_events.js";
 
 const app = express();
 
-const options = {
-  // letsencrypt로 받은 인증서 경로를 입력
-  ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
-  key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
-  requestCert: false,
-  rejectUnauthorized: false,
-};
+// const options = {
+//   // letsencrypt로 받은 인증서 경로를 입력
+//   ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
+//   key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
+//   cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
+//   requestCert: false,
+//   rejectUnauthorized: false,
+// };
 
 const server = https.createServer(options, app);
 // const server = http.createServer(app);

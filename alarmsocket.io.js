@@ -1,5 +1,6 @@
-import { server } from "./index.js";
 import { Server } from "socket.io";
+import server from "./index.js";
+
 
 import redisAdapter from '@socket.io/redis-adapter';
 

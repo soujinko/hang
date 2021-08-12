@@ -14,17 +14,18 @@ const getAllMatchingKeys = async (userPk, next) => {
   let init = 0
   let result = []
   try {
-    while (true) {
-      const data = await redis.scan(init, 'MATCH', `requests:${userPk}:*`, 'COUNT', '100')
-      result.concat(data[1])
-      init = data[0]
-      if (data[0] === '0') break
-    }
+    do {
+      const [cursor, keys] = await redis.scan(init, 'MATCH', `requests:${userPk}:*`, 'COUNT', '100')
+      result.concat(keys)
+      init = cursor
+    } while (cursor !== '0');
   } catch(err) {
     next(err)
   }
     return result;
 }
+
+
 
 const requestsWriteBackAndQuery = async (userPk, next) => {
 

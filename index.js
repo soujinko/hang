@@ -12,6 +12,7 @@ import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
 import https from "https";
+import http from "http";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
 
@@ -29,6 +30,7 @@ const options = {
 };
 
 const server = https.createServer(options, app);
+// const server = http.createServer(app);
 
 dotenv.config();
 

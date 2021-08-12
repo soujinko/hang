@@ -7,6 +7,7 @@ import mypageRouter from "./mypage.js";
 import guideRouter from "./guide.js";
 import travelerRouter from "./traveler.js";
 import verification from "../middleware/verification.js";
+import alarmRouter from "./alarms.js";
 const router = express.Router();
 
 router.use("/users", usersRouter);
@@ -17,5 +18,6 @@ router.use("/user", userRouter);
 router.use("/mypage", mypageRouter);
 router.use("/guide", guideRouter);
 router.use("/traveler", travelerRouter);
+router.use("/alarm", alarmRouter);
 
 export default router;

@@ -7,7 +7,6 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import csrfProtection from "csurf";
 import errorHandlers from "./util/error_handlers.js";
-import http from "http";
 import passport from "passport";
 import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
@@ -15,16 +14,27 @@ import fs from "fs";
 import https from "https";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
-import { Server } from "socket.io";
 
 // import webSocket from "./websocket.js";
 
 const app = express();
 
+const options = {
+  // letsencrypt로 받은 인증서 경로를 입력
+  ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
+  key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
+  requestCert: false,
+  rejectUnauthorized: false,
+};
+
+const server = https.createServer(options, app);
+
 dotenv.config();
 
 const corsOption = {
   origin: [
+    "https://54.180.143.198:443",
     "https://localhost:3000",
     "https://seunggyulee.shop",
     "https://hanging.kr",
@@ -44,42 +54,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(passport.initialize());
 passportConfig();
 // app.use(/^((?!users).)*$/, verification);
-app.get("/", async (req, res, next) => {
-  res.send({});
-});
 
 app.use("/api", router);
 app.use("/docs", swaggerDocs);
 app.use(errorHandlers);
 
-const options = {
-  // letsencrypt로 받은 인증서 경로를 입력
-  ca: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/fullchain.pem"),
-  key: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/soujinko.shop/cert.pem"),
-  requestCert: false,
-  rejectUnauthorized: false,
-};
-
-const server = http.createServer(app);
-
 setInterval(keepAlive, 60 * 240 * 1000);
 
-// server.listen(3000, () => {
-//   console.log("서버 연결 성공");
-// });
-
-const server2 = https.createServer(options, app);
-server2.listen(443, () => {
-  console.log("서버 연결 성공2");
-});
-const io = new Server(server2, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
-});
-
-io.on("connection", (socket) => {
-  console.log("확인용 로그: 알람용 소켓 연결됨");
-});
-// https.createServer(options, app).listen(443);
-
-export { server, app, server2 };
+export default server;

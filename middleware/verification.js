@@ -17,12 +17,12 @@ const verification = async (req, res, next) => {
       getConnection((conn) => {
         try {
           conn.beginTransaction();
-          conn.query(`SELECT refreshToken FROM users WHERE userPk=${user.userPk}`, (err, DBRefreshToken) => {
+          conn.query(`SELECT refreshToken FROM users WHERE userPk= ?`,[user.userPk], (err, DBRefreshToken) => {
           if (err) throw err;
           if (JSON.parse(JSON.stringify(DBRefreshToken[0].refreshToken)) !== req.cookies.refresh) {
             const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {expiresIn:'7d', algorithm:'HS512'})
             // 새 refresh
-            conn.query(`UPDATE users SET refreshToken='${refreshToken}' WHERE userPk=${user.userPk}`)
+            conn.query(`UPDATE users SET refreshToken= ? WHERE userPk= ?`,[refreshToken, user.userPk])
             conn.commit()
             res.cookie('refresh', refreshToken, { httpOnly:true, sameSite:'none', secure:true })
           }
@@ -45,7 +45,7 @@ const verification = async (req, res, next) => {
       getConnection((conn)=>{
         try{
           conn.beginTransaction();
-          conn.query(`UPDATE users SET refreshToken='${refreshToken}' WHERE=${user.userPk}`)
+          conn.query(`UPDATE users SET refreshToken= ? WHERE= ?`,[refreshToken, user.userPk])
           conn.commit();
         } catch(err) {
           conn.rollback()
@@ -75,7 +75,7 @@ const verification = async (req, res, next) => {
       
       console.log('여기냐? 3')
       await connection.beginTransaction();
-      const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk=${expiredUser.userPk}`)))[0][0].refreshToken
+      const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk= ?`, [expiredUser.userPk])))[0][0].refreshToken
       
       console.log('여기냐? 4', DBRefreshToken, req.cookies.refresh)
       await connection.release()

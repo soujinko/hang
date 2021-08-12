@@ -68,8 +68,8 @@ const searchAndPaginate = async (req, userPk, next) => {
     }
 
     sequel += ` LIMIT ?, 10) a JOIN users b ON a.userPk = b.userPk`;
-    pageNum = 10 * (pageNum - 1) && 10 * (pageNum - 1) > 0 && 10 * (pageNum - 1) || 0
-    inputs.push(pageNum)
+    const limitParam = 10 * (pageNum - 1) && 10 * (pageNum - 1) > 0 && 10 * (pageNum - 1) || 0
+    inputs.push(limitParam)
     
     const data = await connection.query(sequel, inputs);
     await connection.release(); // return이 있어서 finally가 실행 안될까봐 넣어 둠

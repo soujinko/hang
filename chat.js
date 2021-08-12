@@ -12,7 +12,7 @@ const pubClient = new Redis({ password:process.env.REDIS_PASSWORD })
 const subClient = pubClient.duplicate();
 const redis = pubClient.duplicate();
 const pipeline = pubClient.pipeline();
-const multi = pubClient.multi()
+const multi = pubClient.multi();
 
 io.adapter(redisAdapter(pubClient, subClient));
 

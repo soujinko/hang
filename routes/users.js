@@ -7,14 +7,13 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-import { RedisAdapter } from '@socket.io/redis-adapter';
 import Redis from 'ioredis'
+import zscanner from '../functions/zscanner.js'
 
 dotenv.config();
 
-const redis = new Redis({password:process.env.REDIS_PASSWORD});
 const router = express.Router();
-
+const redis = new Redis({password:process.env.REDIS_PASSWORD})
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
   const { pNum: phoneNumber } = req.body;
@@ -160,7 +159,7 @@ router.post("/signin", (req, res, next) => {
           { expiresIn: "3h", algorithm: "HS512" }
         );
         const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {
-          expiresIn: "7d",
+          expiresIn: "30d",
           algorithm: "HS512",
         });
 
@@ -218,44 +217,39 @@ router.delete("/signout", verification, (req, res, next) => {
 router.get("/chat", verification, asyncHandle(async(req, res, next) => {
   const { userPk } = res.locals.user;
   
-  let init = 0
-  let result = []
-  let chatList = []
-  
-  do {
-    const [cursor, scores] = await redis.zscan(userPk, cursor)
-    chatList.concat(scores[1][1][1])
-    init = cursor
-  } while (cursor !== '0');
-  
+  const chatList = await zscanner(userPk)
+  console.log(chatList)
+
   try {
     await connection.beginTransaction()
+    let result = []
     let obj = {}
-    for (let i=0; i<chatList.length; i++) {
-      if (i % 2 !== 1) {
-      obj['lastChat'] = await redis.lrange(chatList[i], 0, 2)
-      for (let v of chatList[i].split(':')) {
-        if (userPk !== +v) {
-          const nickAndProf = await connection.query('SELECT profileImg, nickname FROM users WHERE userPk=?',[+v])
+    for (let i = 0; i < chatList.length; i++) {
+      if (i % 2 === 0) {
+        obj['lastChat'] = await redis.lrange(chatList[i], -1, -1)
+        for (let v of chatList[i].split(':')) {
+          if (userPk !== +v && +v) {
+          const nickAndProf = await connection.query('SELECT profileImg, nickname FROM users WHERE userPk=?', [+v])
+          
           obj['nickname'] = nickAndProf[0][0].nickname
           obj['profileImg'] = nickAndProf[0][0].profileImg
           obj['targetPk'] = +v
+          }
         }
-      }
-    } else {
+      } else {
         obj['unchecked'] = chatList[i]
         result.push(obj)
         obj = {}
       }
     }
+    console.log(result)
+    res.status(200).json({result})
   } catch(err) {
     await connection.rollback()
     next(err)
   } finally {
     await connection.release()
   }
-
-  res.status(200).json({result})
 }))
 
 

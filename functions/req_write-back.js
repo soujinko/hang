@@ -24,7 +24,7 @@ const requestsWriteBack = (userPk ,next) => {
         redis.lrange(v, 0, -1, (err, reqData) => {
           if (err) return next(err)
           sequel += `, (?, ?, ?)`
-          insertData.concat([reqData[0], reqData[1], reqData[2]])
+          insertData = insertData.concat([reqData[0], reqData[1], reqData[2]])
           if (+i === pivot) {
             getConnection((conn) => {
               try{

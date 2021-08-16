@@ -14,7 +14,6 @@ const io = new Server(server, {
 const pubClient = new Redis({password:process.env.REDIS_PASSWORD});
 const subClient = pubClient.duplicate();
 const redis = pubClient
-const multi = pubClient.multi();
 const pipeline = pubClient.pipeline()
 
 export default redis
@@ -57,7 +56,6 @@ io.on("connection", (socket) => {
       // 데이터가 제대로 전달되지 않은 경우
       if (!joiningUserPk || !targetUserPk || !nickname) return
       
-      
       socket.username = nickname
       const roomName = 
         joiningUserPk < targetUserPk && 
@@ -69,7 +67,6 @@ io.on("connection", (socket) => {
           .zadd('delCounts', 'NX', 0, roomName)
           .lrange(roomName, 0, -1, async (err, chatLogs) => {
             if (err) console.error(err)
-            console.log(chatLogs)
             try {
               await connection.beginTransaction()
               const [one, two] = (await connection.query('SELECT userPk, nickname FROM users WHERE userPk IN (?,?)', roomName.split(':')))[0]
@@ -89,7 +86,6 @@ io.on("connection", (socket) => {
 
     socket.on('sendMessage', async (data) => {
       const { roomName, targetPk, message, userPk } = data;
-      console.log('sendMessag!!:', roomName, targetPk, message, userPk)
       const curTime = Date.now()
       // 방에 혼자 있다면
       const currentRoom = await io.of('/').adapter.sockets(new Set([roomName]))
@@ -111,7 +107,8 @@ io.on("connection", (socket) => {
       const log = JSON.stringify({ userPk:userPk, message:message, curTime:curTime })
       
       redis.zadd('delCounts', 'GT', 1, roomName)
-      redis.rpush(roomName, log)
+      redis
+        .rpush(roomName, log)
         .then(async res => await io.to(roomName).emit('updateMessage', { userPk: userPk,message: message }))
     });
 
@@ -140,9 +137,8 @@ io.on("connection", (socket) => {
 
 
     socket.on('ByeBye', (data) => {
-      console.log('quit!!!!')
       const { userPk, roomName } = data
-      // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터도 삭제.
+      // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터는 delCount 0일 경우 삭제
       pipeline
         .zscore('delCounts', roomName, (err, delCount) => {
             if (+delCount < 1) {
@@ -157,9 +153,8 @@ io.on("connection", (socket) => {
 
     //  로그아웃 혹은 앱 웹 끄면 소켓 삭제
     socket.on("logout", (data) => {
-      const userPk = data.uid;
       socket.on("disconnect", () => {
-        delete currentOn[userPk];
+        delete currentOn[data.uid];
       });
     });
 

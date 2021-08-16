@@ -1,4 +1,4 @@
-import server from "./index.js";
+import { server } from "./index.js";
 import "./socket.js";
 
 server.listen(443, () => {

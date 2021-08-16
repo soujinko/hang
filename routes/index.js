@@ -11,7 +11,7 @@ import alarmRouter from "./alarms.js";
 const router = express.Router();
 
 router.use("/users", usersRouter);
-router.use(verification);
+// router.use(verification);
 router.use("/main", mainRouter);
 router.use("/like", likeRouter);
 router.use("/user", userRouter);

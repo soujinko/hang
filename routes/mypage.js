@@ -2,52 +2,65 @@ import express from "express";
 import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
 import async from "async";
+import { redisClient } from "../index.js";
+import redis from "redis";
+
 const router = express.Router();
-// 내 프로필, 여행 일정, 확정 약속 불러오기
-router.get("/", async (req, res, next) => {
-  getConnection(async (conn) => {
-    conn.beginTransaction();
-    try {
-      let userInfo;
-      let tripInfo;
-      const { userPk } = res.locals.user;
-      // const { userPk } = req.params;
-      const finduser = `select * from userView where userPk ='${userPk}'`;
-      //유저의 프로필 정보 가져오기
-      conn.query(finduser, function (err, result) {
-        if (err) {
-          console.error(err);
-          conn.rollback();
-          // next(err);
-        }
-        userInfo = Object.values(JSON.parse(JSON.stringify(result)))[0];
-        // 유저의 여행 정보 가져오기
-        conn.query(
-          `select * from trips where userPk =${userPk}`,
-          function (err, result) {
-            if (err) {
-              console.error(err);
-              conn.rollback();
-              // next(err);
-            }
-            let tripInfo = Object.values(JSON.parse(JSON.stringify(result)));
-            // console.log("나의 여행 리스트", tripInfo);
 
-            res.send({ userInfo, tripInfo });
-          }
-        );
+const checkRedis = async (req, res, next) => {
+  const { userPk } = req.params;
+  console.log("redisData!!!");
+  redisClient.hget(userPk, "userInfo", function (error, userInfo) {
+    if (error) res.status(400).send(error);
+    if (userInfo !== null) {
+      redisClient.hget(userPk, "tripInfo", function (error, tripInfo) {
+        tripInfo = JSON.parse(tripInfo);
+        userInfo = JSON.parse(userInfo);
+        res.send({ userInfo, tripInfo });
       });
-
-      conn.commit();
-    } catch (err) {
-      console.log(err);
-      conn.rollback();
-      err.status = 400;
-      next(err);
-    } finally {
-      conn.release();
-    }
+    } else next();
   });
+};
+
+// 내 프로필, 여행 일정, 확정 약속 불러오기
+router.get("/:userPk", checkRedis, async (req, res, next) => {
+  try {
+    connection.beginTransaction();
+    // const { userPk } = res.locals.user;
+    const { userPk } = req.params;
+    console.log("222222");
+    //유저의 프로필 정보 가져오기
+    const userInfo = JSON.parse(
+      JSON.stringify(
+        await connection.query(`select * from userView where userPk=?`, [
+          userPk,
+        ])
+      )
+    )[0];
+    // 여행정보 가져오기
+    const tripInfo = JSON.parse(
+      JSON.stringify(
+        await connection.query(`select * from trips where userPk =?`, [userPk])
+      )
+    )[0];
+    connection.commit();
+    redisClient.hmset(
+      userPk,
+      {
+        userInfo: JSON.stringify(userInfo),
+        tripInfo: JSON.stringify(tripInfo),
+      },
+      redis.print
+    );
+    res.send({ userInfo, tripInfo });
+  } catch (err) {
+    console.log(err);
+    connection.rollback();
+    err.status = 400;
+    next(err);
+  } finally {
+    connection.release();
+  }
 });
 
 // 나의 약속 불러오기
@@ -220,19 +233,10 @@ router.get("/promise", async (req, res, next) => {
 router.post("/create_trip", async (req, res, next) => {
   try {
     connection.beginTransaction();
+    const { region, city, startDate, endDate, tripInfo } = req.body;
     // const { userPk } = req.params;
     const { userPk } = res.locals.user;
-    const { region, city, startDate, endDate, tripInfo } = req.body;
-    // console.log(
-    //   "등록 정보",
-    //   userPk,
-    //   region,
-    //   city,
-    //   startDate,
-    //   endDate,
-    //   tripInfo
-    // );
-    // let saveMyTrip = `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`;
+
     let startNewDate = Date.parse(startDate);
     let endNewDate = Date.parse(endDate);
     let today = new Date();
@@ -250,17 +254,41 @@ router.post("/create_trip", async (req, res, next) => {
     const myTripDates = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=${userPk} or partner=${userPk}`
+          `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=? or partner=?`,
+          [userPk, userPk]
         )
       )
     )[0];
+    //  새 여행 저장하는 함수, 레디스 디비 업데이트
+    const saveNewTrip = async (tripInfo) => {
+      await connection.query(
+        `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (?,?,?,?,?,?)`,
+        [userPk, region, city, startDate, endDate, tripInfo]
+      );
+      await connection.commit();
+
+      let NewTripInfo = JSON.parse(
+        JSON.stringify(
+          await connection.query("select * from trips where userPk=?", [userPk])
+        )
+      )[0];
+
+      let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
+      redisClient.hmset(
+        userPk,
+        {
+          tripInfo: JSON.stringify(NewTripInfo),
+        },
+        redis.print
+      );
+      res.status(201).send({ newTripId });
+    };
 
     if (myTripDates.length > 0) {
       let myTripDates2 = myTripDates.map((e) => [
         e["left(startDate, 10)"],
         e["left(endDate, 10)"],
       ]);
-      // console.log("내 약속 여행 리스트", myTripDates2);
 
       // 만약 내 여행일정과 겹치면 에러
       let count = 0;
@@ -280,37 +308,14 @@ router.post("/create_trip", async (req, res, next) => {
       });
       // db에 여행 등록
       if (count === myTripDates2.length) {
-        await connection.query(
-          `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`
-        );
-        await connection.commit();
-
-        let newTripId = JSON.parse(
-          JSON.stringify(
-            await connection.query(
-              `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`
-            )
-          )
-        )[0].map((e) => e["tripId"]);
-        res.status(201).send({ newTripId });
+        saveNewTrip(tripInfo);
       } else {
         throw new Error("반복문 돌다가 오류");
       }
     } else {
-      await connection.query(
-        `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (${userPk},'${region}','${city}','${startDate}','${endDate}','${tripInfo}')`
-      );
-      await connection.commit();
-
-      let newTripId = JSON.parse(
-        JSON.stringify(
-          await connection.query(
-            `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`
-          )
-        )
-      )[0].map((e) => e["tripId"]);
-      res.status(201).send({ newTripId });
+      saveNewTrip(tripInfo);
     }
+    // `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`
   } catch (err) {
     console.error("에러메시지 확인", err.message);
     await connection.rollback();
@@ -325,16 +330,27 @@ router.delete("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
+    // const { userPk } = req.params;
     const { tripId } = req.body;
 
     //나의 여행 삭제하기
     const result = await connection.query(
-      `DELETE FROM trips WHERE tripId=${tripId} AND userPk=${userPk}`
+      `DELETE FROM trips WHERE tripId=? AND userPk=?`,
+      [tripId, userPk]
     );
     if (result[0].affectedRows === 0) {
       throw new Error();
     } else {
       await connection.commit();
+      let tripInfo = JSON.parse(
+        JSON.stringify(
+          await connection.query("select * from trips where userPk=?", [userPk])
+        )
+      )[0];
+      redisClient.hmset(userPk, {
+        tripInfo: JSON.stringify(tripInfo),
+      });
+
       res.status(200).send();
     }
   } catch (err) {
@@ -388,17 +404,33 @@ router.patch("/update_guide", async (req, res, next) => {
 router.patch("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    const { userPk } = res.locals.user;
-    const { nickname, profileImg, region, city, intro } = req.body;
+    // const { userPk } = res.locals.user;
+
+    const { userPk, nickname, profileImg, region, city, intro } = req.body;
 
     // 내 프로필 정보 업데이트하기
     const result = await connection.query(
-      `UPDATE users set nickname='${nickname}',profileImg='${profileImg}',region='${region}',city='${city}',intro='${intro}' where userPk=${userPk}`
+      `UPDATE users set nickname=?,profileImg=?,region=?,city=?,intro=? where userPk=?`,
+      [nickname, profileImg, region, city, intro, userPk]
     );
     if (result[0].affectedRows === 0) {
       throw new Error();
     } else {
       await connection.commit();
+      const newMyProfile = JSON.parse(
+        JSON.stringify(
+          await connection.query(`select * from userView where userPk=?`, [
+            userPk,
+          ])
+        )
+      )[0];
+      redisClient.hmset(
+        userPk,
+        {
+          userInfo: JSON.stringify(newMyProfile),
+        },
+        redis.print
+      );
       res.status(201).send();
     }
   } catch (err) {

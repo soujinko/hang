@@ -278,6 +278,45 @@ paths:
           description: Signed-out
         500:
           description: Internal server error
+  
+  /api/users/chat:
+    get:
+      summary: get user's chat rooms
+      tags: [Users]
+      description: GET chat rooms
+      responses:
+        200: 
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    lastChat:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          userPk:
+                            type: number
+                          message:
+                            type: string
+                          curTime:
+                            type: timestamp
+                    nickname:
+                      type: string
+                    profileImg:
+                      type: string
+                    targetPk: 
+                      type: number
+                    unchecked: string
+        500:
+          description: Internal server error
+        
+      
+
        
         
 

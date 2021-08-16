@@ -3,7 +3,7 @@ import Crypto from 'crypto'
 import dotenv from 'dotenv'
 
 dotenv.config()
-// req, res, next
+
 const NC_SMS = (req, next, authNumber) => {
 	const accessKey = process.env.NC_ACCESS_KEY;	
 	const secretKey = process.env.NC_SECRET_KEY;

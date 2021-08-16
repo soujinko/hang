@@ -1,10 +1,18 @@
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
-import { getConnection, connection } from '../models/db.js'
+import { connection } from '../models/db.js'
 
 dotenv.config()
 
 const verification = async (req, res, next) => {
+  
+  console.log('리프레쉬 토큰:', req.cookies.refresh)
+  const expiredUser = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {ignoreExpiration:true})
+  await connection.beginTransaction();
+  const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk= ?`, [expiredUser.userPk])))[0][0].refreshToken
+  await connection.release()
+  console.log('DB에 저장된 리프레쉬토큰:', DBRefreshToken)
+  console.log('BOOLEAN:', req.cookies.refresh === DBRefreshToken)
   // 토큰 자체가 없는 경우 or cookies jwt와 headers jwt가 다른경우
   if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)
   // jwt verify가 성공할 경우 next
@@ -23,9 +31,9 @@ const verification = async (req, res, next) => {
 
       // 기간 지난 jwt가 변형 되진 않았는지 검증. 변형되었다면 새로 로그인
       const expiredUser = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {ignoreExpiration:true})
-      // refresh를 verify 후 DB와 대조. DB와 다르면 새로 로그인
+      // refresh를 verify
       jwt.verify(req.cookies.refresh, process.env.PRIVATE_KEY, {algorithms:['HS512']})
-      
+      // refresh db저장정보와 일치여부 검사
       await connection.beginTransaction();
       const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk= ?`, [expiredUser.userPk])))[0][0].refreshToken
       
@@ -47,7 +55,7 @@ const verification = async (req, res, next) => {
       next()
       
     } catch(err) {
-      console.log(err)
+      console.error(err)
       console.log('여기냐? 8')
       // 1.jwt와 refresh가 모두 expired되었거나, 
       // 2.jwt가 무효하고 refresh가 변형이 되었거나,

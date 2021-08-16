@@ -15,6 +15,7 @@ const pubClient = new Redis({password:process.env.REDIS_PASSWORD});
 const subClient = pubClient.duplicate();
 const redis = pubClient
 const multi = pubClient.multi();
+const pipeline = pubClient.pipeline()
 
 export default redis
 
@@ -53,10 +54,9 @@ io.on("connection", (socket) => {
 
     socket.on('join', (data) => {
       const { joiningUserPk, targetUserPk, nickname } = data;
-      console.log('JOIN!!!',joiningUserPk, targetUserPk, nickname)
       // 데이터가 제대로 전달되지 않은 경우
       if (!joiningUserPk || !targetUserPk || !nickname) return
-      console.log('JOIN Falsy 검사 통과!!')
+      
       
       socket.username = nickname
       const roomName = 
@@ -64,9 +64,9 @@ io.on("connection", (socket) => {
         `${joiningUserPk}:${targetUserPk}` || 
         `${targetUserPk}:${joiningUserPk}`;
         
-        multi
+        pipeline
           .zadd(joiningUserPk+'', 0, roomName)
-          .zadd('delCounts', 'NX', 1, roomName)
+          .zadd('delCounts', 'NX', 0, roomName)
           .lrange(roomName, 0, -1, async (err, chatLogs) => {
             if (err) console.error(err)
             console.log(chatLogs)
@@ -84,7 +84,6 @@ io.on("connection", (socket) => {
             }
           })
           .exec()
-          // remoteJoin 파라미터가 무조건 string이라서 문자열로 변환
           .then(async res => await io.of('/').adapter.remoteJoin(socket.id , roomName))
       });
 
@@ -96,29 +95,24 @@ io.on("connection", (socket) => {
       const currentRoom = await io.of('/').adapter.sockets(new Set([roomName]))
       
       if (currentRoom.size < 2) {
-        // 방이 없었다면 상대방의 sorted set에 생성되고, 있었다면 읽지 않은 채팅마다 + 1
-        redis.zadd(targetPk+'','INCR', 1, roomName, (err, ress)=>{
-          if (err) return next(err)
-        })
-        // 특정 소켓에게 new message이벤트 발송
-        const target = currentOn[targetPk+'']
-        // 상대방이 방에는 없지만 접속해 있는 경우:
-        if (target)
-          await io.sockets.to(target).emit('newMessage', {userPk:userPk, message:message, time:curTime})
+        // 상대방에게 차단당하지 않았다면
+        if (!await redis.sismember(`block:${targetPk}`, userPk)) {
+          // 방이 없었다면 상대방의 sorted set에 생성되고, 있었다면 읽지 않은 채팅마다 + 1
+          redis.zadd(targetPk+'', 'INCR', 1, roomName, async (err, res) => {
+            // 특정 소켓에게 new message이벤트 발송
+            const target = currentOn[targetPk+'']
+            // 상대방이 방에는 없지만 접속해 있는 경우:
+            if (target)
+              await io.sockets.to(target).emit('newMessage', { userPk, message, time: curTime })
+          })
+        }
       }
 
-      const log = JSON.stringify({userPk:userPk, message:message, curTime:curTime})
+      const log = JSON.stringify({ userPk:userPk, message:message, curTime:curTime })
       
-      multi
-        .rpush(roomName, log, (err, res) => {
-          console.log('룸이름:', roomName)
-          console.log('rpush결과:', res)
-        })
-        .zadd('delCounts', 'GT', 1, roomName)
-        .exec()
-        .then(async res => await io.to(roomName).emit('updateMessage', {userPk: userPk,message: message}))
-      
-      
+      redis.zadd('delCounts', 'GT', 1, roomName)
+      redis.rpush(roomName, log)
+        .then(async res => await io.to(roomName).emit('updateMessage', { userPk: userPk,message: message }))
     });
 
     // 상대방이 채팅방 목록을 보고 있으며 메시지를 송신한 사람과의 대화방은 없을 때 새로운 방을 생성
@@ -128,10 +122,10 @@ io.on("connection", (socket) => {
       await io.sockets.to(socket.id).emit('newRoom', {profileImg:nickAndProf[0][0].profileImg, nickname: nickAndProf[0][0].nickname})
     })
 
-    socket.on('leave', async (data) => {
+    socket.on('leave', (data) => {
       const { userPk, roomName } = data
-      console.log('leave 확인!')
-      multi
+      
+      pipeline
         // 자신이 방금 나온 방의 읽지 않은 갯수는 0으로
         .zadd(userPk+'', 'XX', 0, roomName)
         // 메세지 100개로 제한. 
@@ -141,30 +135,24 @@ io.on("connection", (socket) => {
         .exec((err, res) => {
           if (err) console.error(err)
         })
-        console.log('leave 확인! 3')
-      await io.of('/').adapter.remoteLeave(socket.id, roomName);
+        .then(async res => await io.of('/').adapter.remoteLeave(socket.id, roomName))
     })
 
 
-    socket.on('ByeBye', async(data) => {
+    socket.on('ByeBye', (data) => {
       console.log('quit!!!!')
       const { userPk, roomName } = data
       // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터도 삭제.
-      multi
-        .zrem(userPk+'', roomName, (err, data) => console.log(data))
+      pipeline
         .zscore('delCounts', roomName, (err, delCount) => {
-          +delCount < 1 ? 
-          multi
-          .del(roomName) 
-          .zrem('delCounts',roomName)
-          .exec()
-          : 
-          redis.zadd('delCounts','LT', 0, roomName)
-        })
-        .exec((err, res) => {
-          if (err) console.error(err)
-        })
-        await io.of('/').adapter.remoteLeave(socket.id, roomName);
+            if (+delCount < 1) {
+              redis.del(roomName)
+              redis.zrem('delCounts',roomName)
+            } else redis.zadd('delCounts','LT', 0, roomName)
+          })
+        .zrem(userPk+'', roomName)
+        .exec()
+        .then(async res => await io.of('/').adapter.remoteLeave(socket.id, roomName))
     })
 
     //  로그아웃 혹은 앱 웹 끄면 소켓 삭제

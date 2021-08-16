@@ -22,6 +22,7 @@
     "helmet": "^4.6.0",
     "http-errors": "^1.8.0",
     "ioredis": "^4.27.7",
+    "moment-timezone": "^0.5.33",
     "morgan": "^1.10.0",
     "mysql": "^2.18.1",
     "mysql2": "^2.2.5",
@@ -31,6 +32,8 @@
     "request": "^2.88.2",
     "socket.io": "^4.1.3",
     "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.5",
+    "winston-slack-webhook-transport": "^2.0.1",
     "ws": "^7.4.6"
   },
   "devDependencies": {

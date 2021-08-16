@@ -67,7 +67,8 @@ router.post("/duplicate", (req, res, next) => {
         if (err) {
           throw err;
         } else if (data.length > 0) {
-          throw new Error({ status: 409 });
+          // 여기 throw로 하면 안됩니다. 그냥 status로
+          return res.sendStatus(409)
         } else {
           res.sendStatus(200);
         }
@@ -92,21 +93,20 @@ router.post("/", (req, res, next) => {
     gender,
     pNum,
   } = req.body;
+
+  const salt = crypto.randomBytes(64).toString("base64");
+  const hashedPassword = crypto
+    .pbkdf2Sync(
+      password,
+      salt,
+      Number(process.env.ITERATION_NUM),
+      64,
+      "SHA512"
+    )
+    .toString("base64");
   getConnection((conn) => {
     try {
       conn.beginTransaction();
-
-      const salt = crypto.randomBytes(64).toString("base64");
-      const hashedPassword = crypto
-        .pbkdf2Sync(
-          password,
-          salt,
-          Number(process.env.ITERATION_NUM),
-          64,
-          "SHA512"
-        )
-        .toString("base64");
-
       conn.query(
         `INSERT INTO
          users(nickname, userId, password, salt, region, city, age, profileImg, gender, pNum)
@@ -216,10 +216,7 @@ router.delete("/signout", verification, (req, res, next) => {
 
 router.get("/chat", verification, asyncHandle(async(req, res, next) => {
   const { userPk } = res.locals.user;
-  
   const chatList = await zscanner(userPk)
-  console.log(chatList)
-
   try {
     await connection.beginTransaction()
     let result = []
@@ -251,6 +248,98 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
     await connection.release()
   }
 }))
+
+// 차단한 사람들의 정보 가져오기
+router.get('/block', verification, asyncHandle(async(req, res, next) => {
+  const { userPk } = res.locals.user;
+  const blocked = await redis.smembers(`block:${userPk}`)
+  console.log('blocked:',blocked)
+  
+  if (!blocked.length) return res.sendStatus(204)
+  
+  let inputs = [+blocked[0]]
+  let sequel = 'SELECT profileImg, nickname, userPk FROM users WHERE userPk IN (?'
+  
+  blocked.slice(1).forEach(blockedID => {
+    inputs.push(+blockedID)
+    sequel += ',?'
+  })
+  
+  sequel += ');'
+  
+  console.log('sequel:',sequel)
+  console.log('inputs:', inputs)
+  
+  try {
+    await connection.beginTransaction()
+    const blockedUsers = (await connection.query(sequel, inputs))[0]
+    console.log(blockedUsers)
+    res.status(200).json({blockedUsers})
+  } catch (err) {
+    connection.rollback()
+    next(err)
+  } finally {
+    connection.release()
+  }
+}))
+
+// 차단
+router.post('/block', verification, asyncHandle(async(req, res) => {
+  const { userPk } = res.locals.user;
+  const { targetPk } = req.body;
+  await redis.sadd(`block:${userPk}`, targetPk)
+  res.sendStatus(201)
+}))
+
+// 차단해제
+router.patch('/block', verification, asyncHandle(async(req, res) => {
+  const { userPk } = res.locals.user;
+  const { targetPk } = req.body;
+  await redis.srem(`block:${userPk}`, targetPk)
+  res.sendStatus(204)
+}))
+
+// 회원 탈퇴 
+router.delete('/quit', verification, async(req, res, next) => {
+  const { userPk } = res.locals.user;
+  try {
+    await connection.beginTransaction()
+    await connection.query('DELETE FROM users WHERE userPk=?', [userPk])
+    await connection.commit()
+    res.sendStatus(204)
+  } catch(err) {
+    await connection.rollback()
+    next(err)
+  } finally {
+    await connection.release()
+  }
+})
+
+// 비밀번호 수정(p_auth에서 폰 인증문자 인증하고 -> 수정할 비밀번호 입력)
+router.post('/password', verification, async (req, res, next) => {
+  const { newPassword } = req.body;
+  const salt = crypto.randomBytes(64).toString("base64");
+  const hashedPassword = crypto
+    .pbkdf2Sync(
+      newPassword,
+      salt,
+      Number(process.env.ITERATION_NUM),
+      64,
+      "SHA512"
+    )
+    .toString("base64");
+  const newPasswordAndSalt = {password:hashedPassword, salt:salt}
+  try {
+    await connection.beginTransaction()
+    await connection.query('INSERT INTO users SET ?', newPasswordAndSalt)
+    await connection.commit()
+  } catch(err) {
+    await connection.rollback()
+    next(err)
+  } finally {
+    await connection.release()
+  }
+})
 
 
 router.get("/a", verification, (req, res) => {

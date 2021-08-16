@@ -28,7 +28,7 @@ async function keepAlive() {
   try {
     connection.beginTransaction();
     console.log("keepAlive");
-    await connection.query(``);
+    await connection.query(`select * from likes`);
     // connection.ping();
   } catch (err) {
     console.error(err);

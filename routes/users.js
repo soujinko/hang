@@ -253,7 +253,6 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
 router.get('/block', verification, asyncHandle(async(req, res, next) => {
   const { userPk } = res.locals.user;
   const blocked = await redis.smembers(`block:${userPk}`)
-  console.log('blocked:',blocked)
   
   if (!blocked.length) return res.sendStatus(204)
   
@@ -264,16 +263,11 @@ router.get('/block', verification, asyncHandle(async(req, res, next) => {
     inputs.push(+blockedID)
     sequel += ',?'
   })
-  
   sequel += ');'
-  
-  console.log('sequel:',sequel)
-  console.log('inputs:', inputs)
-  
+
   try {
     await connection.beginTransaction()
     const blockedUsers = (await connection.query(sequel, inputs))[0]
-    console.log(blockedUsers)
     res.status(200).json({blockedUsers})
   } catch (err) {
     connection.rollback()

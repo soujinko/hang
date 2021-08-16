@@ -16,7 +16,7 @@ const getAllMatchingKeys = async (userPk, next) => {
   try {
     do {
       const [cursor, keys] = await redis.scan(init, 'MATCH', `requests:${userPk}:*`, 'COUNT', '100')
-      result.concat(keys)
+      result = result.concat(keys)
       init = cursor
     } while (cursor !== '0');
   } catch(err) {
@@ -24,8 +24,6 @@ const getAllMatchingKeys = async (userPk, next) => {
   }
     return result;
 }
-
-
 
 const requestsWriteBackAndQuery = async (userPk, next) => {
 
@@ -55,7 +53,7 @@ const requestsWriteBackAndQuery = async (userPk, next) => {
                   redis.lrange(key, 0, -1, (err, reqData) => {
                     if (err) return next(err)
                     sequel += `, (?, ?, ?)`
-                    cachedData.concat([reqData[0], reqData[1], reqData[2]])
+                    cachedData = cachedData.concat([reqData[0], reqData[1], reqData[2]])
                     // +i와 pivot이 같은 경우란 cachedKeys를 끝까지 돌았다는 것이다. sequel에 ,(...)문자열을 더한 상태가 유지되려면 이 block내에서 끝내야 하기때문에 어쩔 수 없음
                     if (+i === pivot) {
                       conn.query(sequel, cachedData)

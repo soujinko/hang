@@ -1,69 +1,62 @@
-import { transports, format, createLogger } from 'winston'
+import winston from 'winston'
 import Daily from 'winston-daily-rotate-file'
 import dotenv from 'dotenv'
 import SlackHook from 'winston-slack-webhook-transport'
+import fs from 'fs'
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const { File, Console } = transports
-const { combine, timestamp, printf, colorize, simple, align } = format
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const { File, Console } = winston.transports
+const { combine, timestamp, printf, colorize, simple, align } = winston.format
+
+const logDir = __dirname + '/../logs'
 const logFormat = printf(info => {
-  return `${info.timestamp} ${info.level}: ${info.message}`
+  return `${info.timestamp} ${info.level}: ${info.label} - ${info.message}`
 })
+
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir)
 
 dotenv.config()
 
-const levels = {
-  levels:{
-    error: 0,
-    warn: 1,
-    info: 2,
-    http: 3,
-    verbose: 4,
-    debug: 5,
-    silly: 6
-  },
-  colors:{
-    error:'red',
-    warn:'yellow',
-    info:'green',
-    debug:'blue'
-  } 
-};
-
-// EPIPE에러발생시 exit 하지 않도록
+// EPIPE에러발생시 exit 하지 않도록 하는 예시
 function ignoreEpipe(err) {
   return err.code !== 'EPIPE';
 }
 
 // level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-const logger = createLogger({
+const logger = winston.createLogger({
   exitOnError: false,
-  levels: levels,
+  level:'debug',
   format: combine(
     timestamp({
       format: 'YYYY-MM-DD HH:mm:ss'
     }),
     align(),
-    logFormat()
+    logFormat
   ),
-  exceptionHandlers:[
-    new File({ filename: '/var/log/winston/exceptions.log'})
+  exceptionHandlers: [
+    new File({ filename: 'logs/' + 'exceptions.log'})
   ],
-  rejectionHandlers:[
-    new File({ filename: '/var/log/winston/rejections.log'})
+  rejectionHandlers: [
+    new File({ filename: 'logs/' + 'rejections.log'})
   ],
   transports: [
      // default: info
     new SlackHook({
-      webhookUrl: 'https://hooks.slack.com/services/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',
+      level: 'error',
+      webhookUrl: 'https://hooks.slack.com/services/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',
       channel: 'errors',
       username: 'ERROR BOT',
-      level: 'error'
+      unfurlLinks: true,
+      unfurlMedia: true,
+      iconUrl: 'https://img.icons8.com/cotton/2x/warning-triangle.png'
     }),
     new Daily({
       level: 'info',
       datePattern: 'YYYY-MM-DD',
-      dirname: '/var/log/winston/',
+      dirname: 'logs/',
       filename: `%DATE%.log`,
       maxFiles: '7d',
       // zippedArchive: true
@@ -71,7 +64,7 @@ const logger = createLogger({
     new Daily({
       level: 'error',
       datePattern: 'YYYY-MM-DD',
-      dirname: '/var/log/winston/',
+      dirname: 'logs/',
       filename: `%DATE%.error.log`,
       maxFiles: '7d',
       // zippedArchive: true

@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import router from "./routes/index.js";
-import logger from "morgan";
+import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import csrfProtection from "csurf";
@@ -14,6 +14,7 @@ import fs from "fs";
 import https from "https";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
+import logger from './config/winston_config.js';
 
 // import webSocket from "./websocket.js";
 
@@ -45,7 +46,7 @@ const corsOption = {
 
 app.use(express.static("public"));
 app.use(cors(corsOption));
-app.use(logger("dev"));
+app.use(morgan('combined', {stream: logger.stream}));
 // 헬멧은 기본적으로 15가지 보안 기능 중 11가지 기능을 제공하고, 4가지 기능은 명시적으로 사용을 지정해야한다.
 app.use(helmet());
 app.use(cookieParser());
@@ -54,9 +55,7 @@ app.use(express.urlencoded({ extended: false }));
 // app.use(csrfProtection({ cookie: true })); // csrfProtection은 cookieparser나 session미들웨어보다 밑에 있어야한다.
 app.use(passport.initialize());
 passportConfig();
-app.use(/^((?!users).)*$/, verification, (req, res, next) => {
-  next();
-});
+app.use(/^((?!users).)*$/, verification);
 
 app.use("/api", router);
 app.use("/docs", swaggerDocs);

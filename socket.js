@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import { connection } from './models/db.js'
-import server from "./index.js";
+import { server } from "./index.js";
 import redisAdapter from '@socket.io/redis-adapter';
 import Redis from 'ioredis';
 import dotenv from 'dotenv';

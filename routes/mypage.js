@@ -1,21 +1,23 @@
 import express from "express";
 import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
-import async from "async";
+// import async from "async";
 import { redisClient } from "../index.js";
-import redis from "redis";
 
 const router = express.Router();
 
 const checkRedis = async (req, res, next) => {
-  const { userPk } = req.params;
+  const { userPk } = res.locals.user;
   console.log("redisData!!!");
-  redisClient.hget(userPk, "userInfo", function (error, userInfo) {
+  redisClient.hget(`${userPk}`, "userInfo", function (error, userInfo) {
     if (error) res.status(400).send(error);
-    if (userInfo !== null) {
-      redisClient.hget(userPk, "tripInfo", function (error, tripInfo) {
+    console.log("레디스 데이터", userInfo);
+
+    if (userInfo) {
+      redisClient.hget(`${userPk}`, "tripInfo", function (error, tripInfo) {
+        console.log("레디스 데이터", tripInfo);
         tripInfo = JSON.parse(tripInfo);
-        userInfo = JSON.parse(userInfo);
+        userInfo = JSON.parse(userInfo)[0];
         res.send({ userInfo, tripInfo });
       });
     } else next();
@@ -23,11 +25,11 @@ const checkRedis = async (req, res, next) => {
 };
 
 // 내 프로필, 여행 일정, 확정 약속 불러오기
-router.get("/:userPk", checkRedis, async (req, res, next) => {
+router.get("/", checkRedis, async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk } = req.params;
+    const { userPk } = res.locals.user;
+    // const { userPk } = req.params;
     console.log("222222");
     //유저의 프로필 정보 가져오기
     const userInfo = JSON.parse(
@@ -44,14 +46,11 @@ router.get("/:userPk", checkRedis, async (req, res, next) => {
       )
     )[0];
     connection.commit();
-    redisClient.hmset(
-      userPk,
-      {
-        userInfo: JSON.stringify(userInfo),
-        tripInfo: JSON.stringify(tripInfo),
-      },
-      redis.print
-    );
+    await redisClient.hmset(`${userPk}`, {
+      userInfo: JSON.stringify(userInfo),
+      tripInfo: JSON.stringify(tripInfo),
+    });
+    // redisClient.hset(userPk, "tripInfo", JSON.stringify(tripInfo));
     res.send({ userInfo, tripInfo });
   } catch (err) {
     console.log(err);
@@ -274,13 +273,10 @@ router.post("/create_trip", async (req, res, next) => {
       )[0];
 
       let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
-      redisClient.hmset(
-        userPk,
-        {
-          tripInfo: JSON.stringify(NewTripInfo),
-        },
-        redis.print
-      );
+      await redisClient.hmset(`${userPk}`, {
+        tripInfo: JSON.stringify(newTripId),
+      });
+
       res.status(201).send({ newTripId });
     };
 
@@ -347,7 +343,7 @@ router.delete("/", async (req, res, next) => {
           await connection.query("select * from trips where userPk=?", [userPk])
         )
       )[0];
-      redisClient.hmset(userPk, {
+      await redisClient.hmset(`${userPk}`, {
         tripInfo: JSON.stringify(tripInfo),
       });
 
@@ -388,6 +384,16 @@ router.patch("/update_guide", async (req, res, next) => {
       throw new Error();
     } else {
       await connection.commit();
+      const userInfo = JSON.parse(
+        JSON.stringify(
+          await connection.query(`select * from userView where userPk=?`, [
+            userPk,
+          ])
+        )
+      )[0];
+      await redisClient.hmset(`${userPk}`, {
+        userInfo: JSON.stringify(userInfo),
+      });
       res.status(200).send();
     }
   } catch (err) {
@@ -404,9 +410,8 @@ router.patch("/update_guide", async (req, res, next) => {
 router.patch("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-
-    const { userPk, nickname, profileImg, region, city, intro } = req.body;
+    const { userPk } = res.locals.user;
+    const { nickname, profileImg, region, city, intro } = req.body;
 
     // 내 프로필 정보 업데이트하기
     const result = await connection.query(
@@ -424,13 +429,10 @@ router.patch("/", async (req, res, next) => {
           ])
         )
       )[0];
-      redisClient.hmset(
-        userPk,
-        {
-          userInfo: JSON.stringify(newMyProfile),
-        },
-        redis.print
-      );
+
+      await redisClient.hmset(`${userPk}`, {
+        userInfo: JSON.stringify(newMyProfile),
+      });
       res.status(201).send();
     }
   } catch (err) {

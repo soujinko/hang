@@ -31,11 +31,7 @@ const options = {
 };
 
 const server = https.createServer(options, app);
-// const server = http.createServer(app);
 const redisClient = new Redis({ password: process.env.REDIS_PASSWORD });
-
-// const redisClient = redis.createClient(6379);
-// redisClient.auth(process.env.REDIS_PASSWORD);
 
 const corsOption = {
   origin: [

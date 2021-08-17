@@ -30,6 +30,8 @@ import { connection } from "../models/db.js";
  * | gosu111  | 20  |      1 | 경기   | 서울 | afd/asfs/ew |    0 |
  * | gosu11   | 20  |      1 | 경기   | 서울 | afd/asfs/ew |    1 |
  * +----------+-----+--------+--------+------+-------------+------+
+ * 
+ * 21/08/15 We added ngram parser to the full text index to search in 'word boundaries' so called
  */
 
 const searchAndPaginate = async (req, userPk, next) => {
@@ -39,38 +41,36 @@ const searchAndPaginate = async (req, userPk, next) => {
     
     let sequel = `SELECT a.userPk, nickname, age, gender, region, city, profileImg, 
                  CASE WHEN a.userPk IN 
-                 (SELECT targetPk FROM likes WHERE userPk= ?) 
+                 (SELECT targetPk FROM likes WHERE userPk = ?) 
                  THEN 1 ELSE 0 END 'like'
-                 FROM (SELECT userPk FROM users`;
-    let inputs = [userPk]
+                 FROM (SELECT userPk FROM users WHERE userPk != ?`;
+    let inputs = [userPk, userPk]
 
     if (keyword || region || city || guide || traveler) {
-      sequel += ` WHERE`;
-      if (keyword)
-        sequel += ` MATCH(nickname) AGAINST('*?*' IN BOOLEAN MODE)`;
-        inputs.push(keyword)
+      if (keyword) {
+        sequel += ` AND MATCH(nickname) AGAINST(? IN BOOLEAN MODE)`;
+        inputs.push(keyword+'*')
+      }
 
       const options = [region, city, guide, traveler];
       const sequelAddOns = [
-        ` region=?`,
-        ` city=?`,
-        ` guide=?`,
-        ` userPk IN (SELECT userPk FROM trips)`,
+        ` AND region=?`,
+        ` AND city=?`,
+        ` AND guide=?`,
+        ` AND userPk IN (SELECT userPk FROM trips)`,
       ];
 
       for (let [i, v] of Object.entries(options)) {
-        if (v)
-          if (sequel.slice(sequel.length - 5) === "WHERE")
-            sequel += sequelAddOns[i];
-          else sequel += " AND" + sequelAddOns[i];
+        if (v) {
+          sequel += sequelAddOns[i];
           if (i < 3) inputs.push(options[i])
+        }
       }
     }
 
     sequel += ` LIMIT ?, 10) a JOIN users b ON a.userPk = b.userPk`;
-    const limitParam = 10 * (pageNum - 1) && 10 * (pageNum - 1) > 0 && 10 * (pageNum - 1) || 0
+    const limitParam = pageNum && pageNum > 0 && 10 * (pageNum - 1) || 0
     inputs.push(limitParam)
-    
     const data = await connection.query(sequel, inputs);
     await connection.release(); // return이 있어서 finally가 실행 안될까봐 넣어 둠
     return JSON.parse(JSON.stringify(data[0]));

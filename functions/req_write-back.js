@@ -3,6 +3,7 @@
 // 100개로 지정한 이유는 sequel에 문자열 붙이려고 for문 도는 시간을 줄이기 위해서
 import Redis from 'ioredis'
 import dotenv from 'dotenv'
+import { getConnection } from '../models/db.js'
 
 dotenv.config()
 
@@ -24,7 +25,7 @@ const requestsWriteBack = (userPk ,next) => {
         redis.lrange(v, 0, -1, (err, reqData) => {
           if (err) return next(err)
           sequel += `, (?, ?, ?)`
-          insertData.concat([reqData[0], reqData[1], reqData[2]])
+          insertData = insertData.concat([reqData[0], reqData[1], reqData[2]])
           if (+i === pivot) {
             getConnection((conn) => {
               try{

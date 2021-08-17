@@ -1,30 +1,15 @@
-import { getConnection } from "../models/db.js";
 import express from "express";
 import dotenv from "dotenv";
 import { redisClient } from "../index.js";
 import { connection } from "../models/db.js";
+import { checkLikeRedis } from "../functions/req_look_aside.js";
 
 dotenv.config();
 
-// const redis = new Redis({ password: process.env.REDIS_PASSWORD });
-
 const router = express.Router();
 
-// 같은 요청 시 캐시에서 먼저 찾기 미들웨어
-const checkRedis = (req, res, next) => {
-  const { userPk } = res.locals.user;
-  console.log(1, userPk);
-
-  redisClient.get(`like=${userPk}`, (error, likeusers) => {
-    if (error) res.status(400).send(error);
-    if (likeusers !== null) {
-      console.log("redisdata", likeusers);
-      res.status(200).send(likeusers);
-    } else next();
-  });
-};
-
-router.get("/", checkRedis, async (req, res) => {
+// 내가 좋아하는 유저리스트, 이미 redis에 있다면 미들웨어에서 반환
+router.get("/", checkLikeRedis, async (req, res) => {
   try {
     connection.beginTransaction();
     // const { userPk } = req.params;
@@ -40,7 +25,7 @@ router.get("/", checkRedis, async (req, res) => {
     )[0];
     console.log("likeusers", JSON.stringify(likeusers));
     // 첫 요청이면 redis 캐시 등록
-    redisClient.set(`like=${userPk}`, JSON.stringify(likeusers));
+    redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
     res.send(likeusers);
   } catch (err) {
     console.error(err);
@@ -52,38 +37,7 @@ router.get("/", checkRedis, async (req, res) => {
   }
 });
 
-// // 좋아요
-// router.get("/", async (req, res, next) => {
-//   getConnection(async (conn) => {
-//     try {
-//       conn.beginTransaction();
-//       const { userPk } = res.locals.user;
-//       // const { userPk } = req.params;
-
-//       // 내가 좋아요한 목록 불러오기
-//       let findlike = `SELECT a.* FROM userView a left join likes b on a.userPk = b.targetPk where b.userPk=${userPk}`;
-
-//       conn.query(findlike, function (err, result) {
-//         if (err) {
-//           console.error(err);
-//           conn.rollback();
-//           next(err);
-//         }
-//         let likeusers = Object.values(JSON.parse(JSON.stringify(result)));
-//         res.send({ likeusers });
-//       });
-//       conn.commit();
-//     } catch (err) {
-//       console.error(err);
-//       conn.rollback();
-//       err.status = 400;
-//       next(err);
-//     } finally {
-//       conn.release();
-//     }
-//   });
-// });
-
+// 이미 디비에 있다면 좋아요 취소, 없다면 좋아요 등록
 router.post("/", async (req, res, next) => {
   let updatePk;
   try {
@@ -135,43 +89,15 @@ router.post("/", async (req, res, next) => {
     const findlike = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `SELECT a.* FROM userView a left join likes b on a.userPk = b.targetPk where b.userPk=${updatePk}`
+          `SELECT a.* FROM userView a left join likes b on a.userPk = b.targetPk where b.userPk=?`,
+          [updatePk]
         )
       )
     )[0];
     console.log("findlike", findlike);
-    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike));
+    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
     connection.release();
   }
 });
-
-// router.delete("/", async (req, res, next) => {
-//   getConnection(async (conn) => {
-//     try {
-//       conn.beginTransaction();
-//       const { userPk } = res.locals.user;
-//       const { targetPk } = req.body;
-//       // 좋아요 취소하기
-//       let deletelike = `DELETE FROM likes WHERE userPk=${userPk} AND targetPk=${targetPk}`;
-
-//       conn.query(deletelike, function (err, result) {
-//         if (err) {
-//           console.error(err);
-//           conn.rollback();
-//           next(err);
-//         }
-//         res.status(200).send();
-//       });
-//       conn.commit();
-//     } catch (err) {
-//       console.error(err);
-//       conn.rollback();
-//       err.status = 400;
-//       next(err);
-//     } finally {
-//       conn.release();
-//     }
-//   });
-// });
 
 export default router;

@@ -143,23 +143,3 @@ router.post(
 );
 
 export default router;
-// let like = `INSERT INTO likes(targetId, id)VALUES('${targetId}', '${id}')`;
-// let find = `SELECT * FROM users LEFT JOIN likes ON users.id = likes.id where users.id='${id}'`;
-// let data =
-//   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('말랑', 'sj23', '서초구', '서울','30', 0 )";
-// let user = "select id from users where nickname='고수진' or nickname='말랑'";
-
-// let findUser =
-// "INSERT INTO users (nickname, userId, region, city, age, gender, guide ) VALUES ('콜라', 'cola', '서면', '부산','10', 2, 0 )";
-// let trip =
-// "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (2,'제주', '서귀포','2021-09-10', '2021-09-15','가자가자' )";
-// let request =
-// "INSERT INTO requests (tripId, reqPk,recPk) VALUES ( 3, 3, 1)";
-// let alarm = "INSERT INTO alarms (requestId) VALUES (1)";
-
-// let trip =
-//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (4,'서초구', '서울','2021-08-12', '2021-08-25','조앙조앙!!')";
-//   "INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, partner) VALUES (3,'서초구', '서울','2021-08-02', '2021-08-05','기대된당', 1)";
-// let finduser =
-//   "INSERT INTO users (nickname, userId, region, city, age, guide ) VALUES ('우라232', '우라232', '서초구', '서울','20', 1 )";
-// 확정 약속 가져오기

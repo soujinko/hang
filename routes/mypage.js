@@ -1,36 +1,16 @@
 import express from "express";
-import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
-// import async from "async";
+import { checkMypageRedis } from "../functions/req_look_aside.js";
 import { redisClient } from "../index.js";
 
 const router = express.Router();
 
-const checkRedis = async (req, res, next) => {
-  const { userPk } = res.locals.user;
-  console.log("redisData!!!");
-  redisClient.hget(`${userPk}`, "userInfo", function (error, userInfo) {
-    if (error) res.status(400).send(error);
-    console.log("레디스 데이터", userInfo);
-
-    if (userInfo) {
-      redisClient.hget(`${userPk}`, "tripInfo", function (error, tripInfo) {
-        console.log("레디스 데이터", tripInfo);
-        tripInfo = JSON.parse(tripInfo);
-        userInfo = JSON.parse(userInfo)[0];
-        res.send({ userInfo, tripInfo });
-      });
-    } else next();
-  });
-};
-
 // 내 프로필, 여행 일정, 확정 약속 불러오기
-router.get("/", checkRedis, async (req, res, next) => {
+router.get("/", checkMypageRedis, async (req, res, next) => {
   try {
+    console.log("222");
     connection.beginTransaction();
     const { userPk } = res.locals.user;
-    // const { userPk } = req.params;
-    console.log("222222");
     //유저의 프로필 정보 가져오기
     const userInfo = JSON.parse(
       JSON.stringify(
@@ -38,7 +18,7 @@ router.get("/", checkRedis, async (req, res, next) => {
           userPk,
         ])
       )
-    )[0];
+    )[0][0];
     // 여행정보 가져오기
     const tripInfo = JSON.parse(
       JSON.stringify(
@@ -46,11 +26,13 @@ router.get("/", checkRedis, async (req, res, next) => {
       )
     )[0];
     connection.commit();
-    await redisClient.hmset(`${userPk}`, {
+
+    await redisClient.hmset(`mypage-${userPk}`, {
       userInfo: JSON.stringify(userInfo),
       tripInfo: JSON.stringify(tripInfo),
     });
-    // redisClient.hset(userPk, "tripInfo", JSON.stringify(tripInfo));
+    // 유효기간 1일
+    await redisClient.expire(`mypage-${userPk}`, 86400);
     res.send({ userInfo, tripInfo });
   } catch (err) {
     console.log(err);
@@ -66,7 +48,6 @@ router.get("/", checkRedis, async (req, res, next) => {
 router.get("/promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = req.params;
     const { userPk } = res.locals.user;
     let confirmed = [];
     let requested = [];
@@ -76,55 +57,54 @@ router.get("/promise", async (req, res, next) => {
     const confirmTripList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select * from trips where (userPk =${userPk} and partner is not null) or partner=${userPk} `
+          `select * from trips where (userPk =? and partner is not null) or partner=?`,
+          [userPk, userPk]
         )
       )
     )[0];
-    // console.log("confirmTripList.length", confirmTripList.length);
+
     if (confirmTripList.length === 0) {
       confirmed = [];
     } else {
       confirmTripList.forEach(async (e) => {
         // 나를 가이드로 등록한 여행자 (확정 약속)
-        if (e.partner === parseInt(userPk)) {
+        function getElement(e, result, bool) {
           let element = {};
-          const result = JSON.parse(
-            JSON.stringify(
-              await connection.query(
-                `select * from userView where userPk = ${e.userPk} `
-              )
-            )
-          )[0];
           element.userPk = result[0].userPk;
           element.profileImg = result[0].profileImg;
           element.tripId = e.tripId;
-          element.guide = false;
+          element.guide = bool;
           element.nickname = result[0].nickname;
           element.startDate = e.startDate;
           element.endDate = e.endDate;
           element.region = e.region;
           element.city = e.city;
-          confirmed.push(element);
+          console.log("element", element);
+          return element;
+        }
+
+        if (e.partner === parseInt(userPk)) {
+          const result = JSON.parse(
+            JSON.stringify(
+              await connection.query(`select * from userView where userPk=?`, [
+                e.userPk,
+              ])
+            )
+          )[0];
+
+          confirmed.push(getElement(e, result, false));
         } else {
           // 내가 가이드로 등록한 여행자 (확정 약속)
-          let element = {};
           const result = JSON.parse(
             JSON.stringify(
               await connection.query(
-                `select * from userView where userPk = ${e.partner} `
+                `select * from userView where userPk = ?`,
+                [e.partner]
               )
             )
           )[0];
-          element.userPk = result[0].userPk;
-          element.profileImg = result[0].profileImg;
-          element.tripId = e.tripId;
-          element.guide = true;
-          element.nickname = result[0].nickname;
-          element.startDate = e.startDate;
-          element.endDate = e.endDate;
-          element.region = e.region;
-          element.city = e.city;
-          confirmed.push(element);
+          console.log;
+          confirmed.push(getElement(e, result, true));
         }
       });
     }
@@ -132,11 +112,12 @@ router.get("/promise", async (req, res, next) => {
     const reqList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.recPk where b.reqPk=${userPk}`
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.recPk where b.reqPk=?`,
+          [userPk]
         )
       )
     )[0];
-    // console.log("reqList.length", reqList.length);
+
     if (reqList.length === 0) {
       requested = [];
     } else {
@@ -144,9 +125,9 @@ router.get("/promise", async (req, res, next) => {
         let element = {};
         const elements = JSON.parse(
           JSON.stringify(
-            await connection.query(
-              `select * from trips where tripId = ${e.tripId}`
-            )
+            await connection.query(`select * from trips where tripId =?`, [
+              e.tripId,
+            ])
           )
         )[0];
         elements.forEach((el) => {
@@ -167,11 +148,11 @@ router.get("/promise", async (req, res, next) => {
     const recList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=${userPk}`
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=?`,
+          [userPk]
         )
       )
     )[0];
-    // console.log("recList.length", recList.length);
 
     if (recList.length === 0) {
       received = [];
@@ -181,7 +162,8 @@ router.get("/promise", async (req, res, next) => {
         confirmed.length === confirmTripList.length
       ) {
         await connection.commit();
-        // console.log("sen my promise", confirmed, received, requested);
+        console.log(confirmed, received, requested);
+
         res.send({ confirmed, received, requested });
       }
     } else {
@@ -189,9 +171,9 @@ router.get("/promise", async (req, res, next) => {
         let element = {};
         const elements = JSON.parse(
           JSON.stringify(
-            await connection.query(
-              `select * from trips where tripId = ${e.tripId}`
-            )
+            await connection.query(`select * from trips where tripId = ?`, [
+              e.tripId,
+            ])
           )
         )[0];
         elements.forEach((el) => {
@@ -212,7 +194,7 @@ router.get("/promise", async (req, res, next) => {
           confirmed.length === confirmTripList.length
         ) {
           await connection.commit();
-          // console.log("sen my promise", confirmed, received, requested);
+          console.log(confirmed, received, requested);
           res.send({ confirmed, received, requested });
         }
       });
@@ -233,7 +215,6 @@ router.post("/create_trip", async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { region, city, startDate, endDate, tripInfo } = req.body;
-    // const { userPk } = req.params;
     const { userPk } = res.locals.user;
 
     let startNewDate = Date.parse(startDate);
@@ -273,8 +254,8 @@ router.post("/create_trip", async (req, res, next) => {
       )[0];
 
       let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
-      await redisClient.hmset(`${userPk}`, {
-        tripInfo: JSON.stringify(newTripId),
+      await redisClient.hmset(`mypage-${userPk}`, {
+        tripInfo: JSON.stringify(NewTripInfo),
       });
 
       res.status(201).send({ newTripId });
@@ -343,7 +324,7 @@ router.delete("/", async (req, res, next) => {
           await connection.query("select * from trips where userPk=?", [userPk])
         )
       )[0];
-      await redisClient.hmset(`${userPk}`, {
+      await redisClient.hmset(`mypage-${userPk}`, {
         tripInfo: JSON.stringify(tripInfo),
       });
 
@@ -390,8 +371,8 @@ router.patch("/update_guide", async (req, res, next) => {
             userPk,
           ])
         )
-      )[0];
-      await redisClient.hmset(`${userPk}`, {
+      )[0][0];
+      await redisClient.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(userInfo),
       });
       res.status(200).send();
@@ -428,9 +409,9 @@ router.patch("/", async (req, res, next) => {
             userPk,
           ])
         )
-      )[0];
+      )[0][0];
 
-      await redisClient.hmset(`${userPk}`, {
+      await redisClient.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(newMyProfile),
       });
       res.status(201).send();

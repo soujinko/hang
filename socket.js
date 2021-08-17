@@ -16,8 +16,6 @@ const subClient = pubClient.duplicate();
 const redis = pubClient;
 const pipeline = pubClient.pipeline();
 
-export default redis;
-
 io.adapter(redisAdapter(pubClient, subClient));
 
 // 로그인 할 때 유저 정보 받아서 socket id와 함께 저장하기

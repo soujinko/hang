@@ -9,7 +9,6 @@ router.get("/", async (req, res, next) => {
     try {
       let tripInfo = [];
       conn.beginTransaction();
-
       const { userPk } = res.locals.user;
       // const { userPk } = req.params;
       const findMyTrip = `select * from trips where userPk =? and partner is NULL`;
@@ -87,7 +86,6 @@ router.post("/", async (req, res, next) => {
         )
       )
     )[0].map((e) => [e["left(startDate, 10)"], e["left(endDate, 10)"]]);
-    // console.log("userTripDates", userTripDates);
 
     let count = 0;
     userTripDates.forEach((e) => {

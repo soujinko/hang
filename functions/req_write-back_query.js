@@ -4,6 +4,7 @@
 
 import Redis from 'ioredis'
 import dotenv from 'dotenv'
+import { getConnection } from '../models/db.js'
 
 dotenv.config()
 

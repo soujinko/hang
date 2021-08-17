@@ -29,8 +29,10 @@ router.post("/sms_auth", (req, res, next) => {
 
           // const authNumber = Math.floor(Math.random() * 90000) + 10000;
           // NC_SMS(req, next, authNumber);
+          
           // redis에 저장
-          // redis.set(phoneNumber, authNumber, 'EX', 60)
+          
+          // redis.zadd('auth', authNumber, phoneNumber)
           res.sendStatus(200);
         }
       );
@@ -43,16 +45,13 @@ router.post("/sms_auth", (req, res, next) => {
   });
 });
 
-router.post("/p_auth", (req, res, next) => {
+router.post("/p_auth", asyncHandle(async(req, res, next) => {
   const { pNum: phoneNumber, aNum: authNumber } = req.body;
   // redis 데이터 불러와서 비교
-  // redis.get(phoneNumber, (err, data) => {
-  //   if (err) next(err)
-  //   else if (data === authNumber) res.sendStatus(202)
-  //   else res.sendStatus(409)
-  // })
+  // const storedAuthNumber = await redis.zscore('auth', phoneNumber)
+  // authNumber === storedAuthNumber ? res.sendStatus(200) : res.sendStatus(406)
   res.sendStatus(200);
-});
+}));
 
 router.post("/duplicate", (req, res, next) => {
   const { userId, nickname } = req.body;
@@ -309,24 +308,40 @@ router.delete('/quit', verification, async(req, res, next) => {
   }
 })
 
-// 비밀번호 수정(p_auth에서 폰 인증문자 인증하고 -> 수정할 비밀번호 입력)
-router.post('/password', verification, async (req, res, next) => {
-  const { newPassword } = req.body;
-  const salt = crypto.randomBytes(64).toString("base64");
-  const hashedPassword = crypto
-    .pbkdf2Sync(
-      newPassword,
-      salt,
-      Number(process.env.ITERATION_NUM),
-      64,
-      "SHA512"
-    )
-    .toString("base64");
-  const newPasswordAndSalt = {password:hashedPassword, salt:salt}
+router.post('/user_exists', async(req, res) => {
+  const { userId, pNum } = req.body;
   try {
     await connection.beginTransaction()
-    await connection.query('INSERT INTO users SET ?', newPasswordAndSalt)
+    const isUserExists = (await connection.query('SELECT userPk FROM users WHERE userId=? AND pNum=?', [userId, pNum]))[0]
+    isUserExists.length !== 1 ? res.sendStatus(406) : res.sendStatus(200)
+  } catch(err) {
+    next(err)
+  } finally {
+    connection.release()
+  }
+})
+
+// 입력한 id와 전화번호가 일치하는지 검사하는 과정 필요
+// 비밀번호 수정(p_auth에서 폰 인증문자 인증하고 -> 수정할 비밀번호 입력)
+router.post('/password', verification, async (req, res, next) => {
+  const { newPassword, userId } = req.body;
+  const salt = crypto.randomBytes(64).toString("base64");
+  const hashedPassword = crypto
+        .pbkdf2Sync(
+          newPassword,
+          salt,
+          Number(process.env.ITERATION_NUM),
+          64,
+          "SHA512"
+        )
+        .toString("base64");
+  const newPasswordAndSalt = { password: hashedPassword, salt: salt }
+  try {
+    await connection.beginTransaction()
+    await connection.query('UPDATE users SET ? WHERE userId = ?', [newPasswordAndSalt, userId])
     await connection.commit()
+    res.sendStatus(204)
+    
   } catch(err) {
     await connection.rollback()
     next(err)

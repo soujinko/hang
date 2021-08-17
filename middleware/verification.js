@@ -6,6 +6,8 @@ dotenv.config()
 
 const verification = async (req, res, next) => {
   
+  // 토큰 자체가 없는 경우 or cookies jwt와 headers jwt가 다른경우
+  if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)
   console.log('리프레쉬 토큰:', req.cookies.refresh)
   const expiredUser = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {ignoreExpiration:true})
   await connection.beginTransaction();
@@ -13,8 +15,6 @@ const verification = async (req, res, next) => {
   await connection.release()
   console.log('DB에 저장된 리프레쉬토큰:', DBRefreshToken)
   console.log('BOOLEAN:', req.cookies.refresh === DBRefreshToken)
-  // 토큰 자체가 없는 경우 or cookies jwt와 headers jwt가 다른경우
-  if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)
   // jwt verify가 성공할 경우 next
   try {
     const user = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {algorithms:['HS512']})

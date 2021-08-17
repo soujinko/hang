@@ -51,7 +51,12 @@ const logger = winston.createLogger({
       username: 'ERROR BOT',
       unfurlLinks: true,
       unfurlMedia: true,
-      iconUrl: 'https://img.icons8.com/cotton/2x/warning-triangle.png'
+      iconUrl: 'https://a.slack-edge.com/production-standard-emoji-assets/13.0/google-medium/1f4a2.png',
+      formatter: info => {
+          return {
+            text: `*${process.env.name}*:*${process.env.NODE_ENV}* => ${info.level}: ${info.message}`,
+          };
+        }
     }),
     new Daily({
       level: 'info',

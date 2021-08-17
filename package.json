@@ -4,7 +4,7 @@
   "description": "final project HANG",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -r @babel/register ./test/*.js",
+    "test": "jest",
     "start": "npx nodemon ./index.js"
   },
   "author": "변정섭 고수진",
@@ -37,13 +37,16 @@
     "ws": "^7.4.6"
   },
   "devDependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.15.0",
     "@babel/register": "^7.14.5",
     "chai": "^4.3.4",
     "eslint": "^7.31.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
+    "jest": "^27.0.6",
     "mocha": "^9.0.3",
     "nodemon": "^2.0.12",
+    "openapi-types": "^9.1.0",
     "prettier": "^2.3.2",
     "sinon": "^11.1.2",
     "supertest": "^6.1.4",

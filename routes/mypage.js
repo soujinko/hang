@@ -50,8 +50,6 @@ router.get("/promise", async (req, res, next) => {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
     let confirmed = [];
-    let requested = [];
-    let received = [];
 
     // 나를 파트너로 등록한, 혹은 내가 파트너를 등록한 여행 리스트
     const confirmTripList = JSON.parse(
@@ -63,52 +61,47 @@ router.get("/promise", async (req, res, next) => {
       )
     )[0];
 
+    // 확정된 약속 여행정보 + 파트너 정보 객체 생성 함수
+    async function getElement(e, target, bool) {
+      console.log("e", e, target);
+      const result = JSON.parse(
+        JSON.stringify(
+          await connection.query(`select * from userView where userPk=?`, [
+            target,
+          ])
+        )
+      )[0];
+      let element = {};
+      element.userPk = result[0].userPk;
+      element.profileImg = result[0].profileImg;
+      element.tripId = e.tripId;
+      element.guide = bool;
+      element.nickname = result[0].nickname;
+      element.startDate = e.startDate;
+      element.endDate = e.endDate;
+      element.region = e.region;
+      element.city = e.city;
+      console.log("element", element);
+      return element;
+    }
+
     if (confirmTripList.length === 0) {
       confirmed = [];
     } else {
       confirmTripList.forEach(async (e) => {
-        // 나를 가이드로 등록한 여행자 (확정 약속)
-        function getElement(e, result, bool) {
-          let element = {};
-          element.userPk = result[0].userPk;
-          element.profileImg = result[0].profileImg;
-          element.tripId = e.tripId;
-          element.guide = bool;
-          element.nickname = result[0].nickname;
-          element.startDate = e.startDate;
-          element.endDate = e.endDate;
-          element.region = e.region;
-          element.city = e.city;
-          console.log("element", element);
-          return element;
-        }
-
         if (e.partner === parseInt(userPk)) {
-          const result = JSON.parse(
-            JSON.stringify(
-              await connection.query(`select * from userView where userPk=?`, [
-                e.userPk,
-              ])
-            )
-          )[0];
-
-          confirmed.push(getElement(e, result, false));
+          // 나를 가이드로 등록한 여행자 (확정 약속)
+          let newElement = await getElement(e, e.userPk, false);
+          confirmed.push(newElement);
         } else {
           // 내가 가이드로 등록한 여행자 (확정 약속)
-          const result = JSON.parse(
-            JSON.stringify(
-              await connection.query(
-                `select * from userView where userPk = ?`,
-                [e.partner]
-              )
-            )
-          )[0];
-          console.log;
-          confirmed.push(getElement(e, result, true));
+          let newElement = await getElement(e, e.partner, true);
+          confirmed.push(newElement);
         }
       });
     }
 
+    // 내가 요청한 리스트 디비 조회
     const reqList = JSON.parse(
       JSON.stringify(
         await connection.query(
@@ -118,10 +111,23 @@ router.get("/promise", async (req, res, next) => {
       )
     )[0];
 
-    if (reqList.length === 0) {
-      requested = [];
-    } else {
-      reqList.forEach(async (e) => {
+    // 나에게 요청한 리스트 디비 조회
+    const recList = JSON.parse(
+      JSON.stringify(
+        await connection.query(
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=?`,
+          [userPk]
+        )
+      )
+    )[0];
+
+    // 요청 리스트 관련된 여행, 유저 조회하며 리스트 만드는 함수
+    async function getRequests(lists) {
+      let resultList = [];
+      if (lists.length === 0) {
+        return resultList;
+      }
+      await lists.forEach(async (e) => {
         let element = {};
         const elements = JSON.parse(
           JSON.stringify(
@@ -141,64 +147,18 @@ router.get("/promise", async (req, res, next) => {
           element.region = el.region;
           element.city = el.city;
         });
-        requested.push(element);
+        resultList.push(element);
       });
+      return resultList;
     }
+    const requested = await getRequests(reqList);
+    const received = await getRequests(recList);
 
-    const recList = JSON.parse(
-      JSON.stringify(
-        await connection.query(
-          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=?`,
-          [userPk]
-        )
-      )
-    )[0];
-
-    if (recList.length === 0) {
-      received = [];
-      if (
-        received.length === recList.length &&
-        requested.length === reqList.length &&
-        confirmed.length === confirmTripList.length
-      ) {
-        await connection.commit();
-        console.log(confirmed, received, requested);
-
-        res.send({ confirmed, received, requested });
-      }
-    } else {
-      recList.forEach(async (e) => {
-        let element = {};
-        const elements = JSON.parse(
-          JSON.stringify(
-            await connection.query(`select * from trips where tripId = ?`, [
-              e.tripId,
-            ])
-          )
-        )[0];
-        elements.forEach((el) => {
-          element.userPk = e.userPk;
-          element.profileImg = e.profileImg;
-          element.requestId = e.requestId;
-          element.tripId = e.tripId;
-          element.nickname = e.nickname;
-          element.startDate = el.startDate;
-          element.endDate = el.endDate;
-          element.region = el.region;
-          element.city = el.city;
-        });
-        received.push(element);
-        if (
-          received.length === recList.length &&
-          requested.length === reqList.length &&
-          confirmed.length === confirmTripList.length
-        ) {
-          await connection.commit();
-          console.log(confirmed, received, requested);
-          res.send({ confirmed, received, requested });
-        }
-      });
+    async function final() {
+      await connection.commit();
+      res.send({ confirmed, received, requested });
     }
+    final();
   } catch (err) {
     console.error(err);
     await connection.rollback();
@@ -207,7 +167,6 @@ router.get("/promise", async (req, res, next) => {
   } finally {
     connection.release();
   }
-  // });
 });
 
 // 여행 등록하기
@@ -290,6 +249,7 @@ router.post("/create_trip", async (req, res, next) => {
         throw new Error("반복문 돌다가 오류");
       }
     } else {
+      // 확정 약속과 일정 안겹치면 새 여행 등록
       saveNewTrip(tripInfo);
     }
     // `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`

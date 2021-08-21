@@ -2,6 +2,7 @@ import express from "express";
 import { getConnection } from "../models/db.js";
 import { connection } from "../models/db.js";
 
+
 const router = express.Router();
 
 router.post("/", async (req, res, next) => {

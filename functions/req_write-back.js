@@ -9,27 +9,27 @@ dotenv.config()
 
 const redis = new Redis({ password:process.env.REDIS_PASSWORD })
 
-const requestsWriteBack = (userPk ,next) => {
+const requestsWriteBack = (userPk , tripId, reqPk, recPk, next) => {
   redis.scard('requests', (err, reqCnt) => {
   if (err) return next(err)
   if (reqCnt < 99) {
-    redis.rpush(`request:${userPk}:${reqCnt+1}`,[tripId, reqPk, recPk])
+    redis.rpush(`request:${userPk}:${reqCnt+1}`, tripId, reqPk, recPk)
     redis.sadd('requests', `request:${userPk}:${reqCnt+1}`)
   } else {
     redis.smembers('requests', (err, cachedKeys) => {
       if (err) return next(err)
       let sequel = `INSERT INTO requests(tripId, reqPk, recPk) VALUES(?, ?, ?)`
-      let insertData = [tripId, reqPk, recPk]
+      let dataToInsert = [tripId, reqPk, recPk]
+      const pivot = cachedKeys.length - 1
       for (let v of cachedKeys) {
-        const pivot = cachedKeys.length - 1
         redis.lrange(v, 0, -1, (err, reqData) => {
           if (err) return next(err)
           sequel += `, (?, ?, ?)`
-          insertData = insertData.concat([reqData[0], reqData[1], reqData[2]])
+          dataToInsert = dataToInsert.concat([reqData[0], reqData[1], reqData[2]])
           if (+i === pivot) {
             getConnection((conn) => {
               try{
-                conn.query(sequel, insertData)
+                conn.query(sequel, dataToInsert)
               } catch(err) {
                 conn.rollback()
                 next(err)
@@ -44,6 +44,7 @@ const requestsWriteBack = (userPk ,next) => {
         if (err) return next(err)
         redis.unlink(data)
       })
+      redis.del('requests')
     })
   }
 })

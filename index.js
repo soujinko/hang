@@ -14,9 +14,10 @@ import fs from "fs";
 import https from "https";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
-import logger from './config/winston_config.js';
+import Redis from "ioredis";
+import logger from "./config/winston_config.js";
 
-// import webSocket from "./websocket.js";
+dotenv.config();
 
 const app = express();
 
@@ -30,8 +31,7 @@ const options = {
 };
 
 const server = https.createServer(options, app);
-
-dotenv.config();
+const redisClient = new Redis({ password: process.env.REDIS_PASSWORD });
 
 const corsOption = {
   origin: [
@@ -46,7 +46,8 @@ const corsOption = {
 
 app.use(express.static("public"));
 app.use(cors(corsOption));
-app.use(morgan('combined', {stream: logger.stream}));
+app.use(morgan('dev'))
+app.use(morgan("combined", { stream: logger.stream }));
 // 헬멧은 기본적으로 15가지 보안 기능 중 11가지 기능을 제공하고, 4가지 기능은 명시적으로 사용을 지정해야한다.
 app.use(helmet());
 app.use(cookieParser());
@@ -63,4 +64,4 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
-export default server;
+export { server, redisClient };

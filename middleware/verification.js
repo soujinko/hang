@@ -8,13 +8,6 @@ const verification = async (req, res, next) => {
   
   // 토큰 자체가 없는 경우 or cookies jwt와 headers jwt가 다른경우
   if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)
-  console.log('리프레쉬 토큰:', req.cookies.refresh)
-  const expiredUser = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {ignoreExpiration:true})
-  await connection.beginTransaction();
-  const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk= ?`, [expiredUser.userPk])))[0][0].refreshToken
-  await connection.release()
-  console.log('DB에 저장된 리프레쉬토큰:', DBRefreshToken)
-  console.log('BOOLEAN:', req.cookies.refresh === DBRefreshToken)
   // jwt verify가 성공할 경우 next
   try {
     const user = jwt.verify(req.cookies.jwt, process.env.PRIVATE_KEY, {algorithms:['HS512']})
@@ -37,30 +30,23 @@ const verification = async (req, res, next) => {
       await connection.beginTransaction();
       const DBRefreshToken = JSON.parse(JSON.stringify(await connection.query(`SELECT refreshToken FROM users WHERE userPk= ?`, [expiredUser.userPk])))[0][0].refreshToken
       
-      console.log('여기냐? 4', DBRefreshToken, req.cookies.refresh)
       await connection.release()
       if (DBRefreshToken !== req.cookies.refresh) throw new Error('refresh token does not match')
       
       // (jwt 만료 && 변형되지 않음) && (refresh 유효 && 변형되지 않았을 때)
-      console.log('여기냐? 5')
       const newAccessToken = jwt.sign(
 					{ userPk: expiredUser.userPk },
 					process.env.PRIVATE_KEY,
 					{ expiresIn: '3h', algorithm: 'HS512' }
 				);
-      console.log('여기냐? 6')
-      res.cookie('jwt', newAccessToken, { httpOnly:true, sameSite:'none', secure:true  })
-      res.locals.user = expiredUser
-      console.log('여기냐? 7')
-      next()
       
+      res.status(307).cookie('jwt', newAccessToken, { httpOnly:true, secure:true, sameSite:'none' }).json({newAccessToken})
     } catch(err) {
-      console.error(err)
-      console.log('여기냐? 8')
+      err.status = 401
+      next(err)
       // 1.jwt와 refresh가 모두 expired되었거나, 
       // 2.jwt가 무효하고 refresh가 변형이 되었거나,
       // 3.jwt가 expired되었을 뿐 아니라 변형 되었을 경우, refresh의 유효성에 상관없이 새로 로그인
-      res.sendStatus(401)
     }
   }
 }

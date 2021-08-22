@@ -27,7 +27,6 @@ const getAllMatchingKeys = async (userPk, next) => {
 }
 
 const requestsWriteBackAndQuery = async (userPk, next) => {
-
     const cachedRequests = await getAllMatchingKeys(userPk, next)
     // cachedRequests 길이가 0이건 말건 어차피 mysql을 들러야함. 그래서 getConnection부터
     getConnection((conn) => {
@@ -84,6 +83,7 @@ const requestsWriteBackAndQuery = async (userPk, next) => {
       if (err) return next(err)
       redis.unlink(data)
     })
+    redis.del('requests')
 }
 
 export default requestsWriteBackAndQuery

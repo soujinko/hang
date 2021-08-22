@@ -53,7 +53,7 @@ router.post("/:userPk", async (req, res, next) => {
     const checkTrip = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select * from trips where tripId=${tripId} and startDate='${startDate}' and endDate='${endDate}'`
+          `SELECT * FROM trips WHERE tripId=${tripId} AND startDate='${startDate}' AND endDate='${endDate}'`
         )
       )
     )[0];
@@ -65,10 +65,11 @@ router.post("/:userPk", async (req, res, next) => {
     const requestExist = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select * from requests where tripId=${tripId} and reqPk=${userPk} and recPk=${pagePk}`
+          `SELECT * FROM requests WHERE tripId=${tripId} AND reqPk=${userPk} AND recPk=${pagePk}`
         )
       )
     )[0];
+
     if (requestExist.length > 0) {
       throw new Error("이미 가이드를 요청했어요");
     }
@@ -76,7 +77,7 @@ router.post("/:userPk", async (req, res, next) => {
     const userTripDates = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=${pagePk} or partner=${pagePk}`
+          `SELECT LEFT(startDate, 10), LEFT(endDate, 10), tripId FROM trips WHERE userPk=${pagePk} OR partner=${pagePk}`
         )
       )
     )[0].map((e) => [e["left(startDate, 10)"], e["left(endDate, 10)"]]);
@@ -96,10 +97,12 @@ router.post("/:userPk", async (req, res, next) => {
         console.log("count", count);
       }
     });
+
     if (count === userTripDates.length) {
       const result = await connection.query(
         `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
       );
+
       if (result[0].affectedRows === 0) {
         throw new Error("디비 등록하다 오류");
       } else {

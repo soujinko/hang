@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "crypto";
-import { getConnection, connection } from "../models/db.js";
+import { connection } from "../models/db.js";
 import NC_SMS from "../services/NC_SMS.js";
 import dotenv from "dotenv";
 import passport from "passport";
@@ -13,29 +13,42 @@ import zscanner from "../functions/zscanner.js";
 dotenv.config();
 
 const router = express.Router();
-const redis = new Redis({ password: process.env.REDIS_PASSWORD });
+const redis = new Redis({password:process.env.REDIS_PASSWORD})
+const pipeline = redis.pipeline()
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
-  const { pNum: phoneNumber } = req.body;
+  const { pNum: phoneNumber, status } = req.body;
   getConnection((conn) => {
     try {
       conn.beginTransaction();
-      conn.query(
-        `SELECT pNum FROM users WHERE pNum=?`,
-        [phoneNumber],
-        (err, data) => {
-          if (err) throw err;
-          if (data.length > 0) return res.sendStatus(409);
+      // 회원가입이라면
+      if (status) {
+        conn.query(
+          `SELECT pNum FROM users WHERE pNum=?`,
+          [phoneNumber],
+          (err, data) => {
+            if (err) throw err;
+            if (data.length > 0) return res.sendStatus(409);
 
-          // const authNumber = Math.floor(Math.random() * 90000) + 10000;
-          // NC_SMS(req, next, authNumber);
-
-          // redis에 저장
-
-          // redis.zadd('auth', authNumber, phoneNumber)
-          res.sendStatus(200);
-        }
-      );
+            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
+            // NC_SMS(req, next, authNumber);
+            
+            // redis에 저장
+            
+            // redis.zadd('auth', authNumber, phoneNumber)
+            res.sendStatus(200);
+          }
+        );
+      // 비밀번호 찾기라면
+      } else {
+        // const authNumber = Math.floor(Math.random() * 90000) + 10000;
+        // NC_SMS(req, next, authNumber);
+        
+        // redis에 저장
+        
+        // redis.zadd('auth', authNumber, phoneNumber)
+        res.sendStatus(200);
+      }
     } catch (err) {
       conn.rollback();
       next(err);
@@ -152,10 +165,10 @@ router.post("/signin", (req, res, next) => {
             nickname: user.nickname,
           },
           process.env.PRIVATE_KEY,
-          { expiresIn: "3h", algorithm: "HS512" }
+          { expiresIn: '3h', algorithm: "HS512" }
         );
         const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {
-          expiresIn: "30d",
+          expiresIn: '7d',
           algorithm: "HS512",
         });
 
@@ -209,30 +222,24 @@ router.delete("/signout", verification, (req, res, next) => {
   }
 });
 
-router.get(
-  "/chat",
-  verification,
-  asyncHandle(async (req, res, next) => {
-    const { userPk } = res.locals.user;
-    const chatList = await zscanner(userPk);
-    try {
-      await connection.beginTransaction();
-      let result = [];
-      let obj = {};
-      for (let i = 0; i < chatList.length; i++) {
-        if (i % 2 === 0) {
-          obj["lastChat"] = await redis.lrange(chatList[i], -1, -1);
-          for (let v of chatList[i].split(":")) {
-            if (userPk !== +v && +v) {
-              const nickAndProf = await connection.query(
-                "SELECT profileImg, nickname FROM users WHERE userPk=?",
-                [+v]
-              );
-
-              obj["nickname"] = nickAndProf[0][0].nickname;
-              obj["profileImg"] = nickAndProf[0][0].profileImg;
-              obj["targetPk"] = +v;
-            }
+router.get("/chat", verification, asyncHandle(async(req, res, next) => {
+  const { userPk } = res.locals.user;
+  const chatList = await zscanner(userPk)
+  
+  try {
+    await connection.beginTransaction()
+    let result = []
+    let obj = {}
+    for (let i = 0; i < chatList.length; i++) {
+      if (i % 2 === 0) {
+        obj['lastChat'] = await redis.lrange(chatList[i], -1, -1)
+        for (let v of chatList[i].split(':')) {
+          if (userPk !== +v && +v) {
+          const nickAndProf = await connection.query('SELECT profileImg, nickname FROM users WHERE userPk=?', [+v])
+          
+          obj['nickname'] = nickAndProf[0][0].nickname
+          obj['profileImg'] = nickAndProf[0][0].profileImg
+          obj['targetPk'] = +v
           }
         } else {
           obj["unchecked"] = chatList[i];
@@ -308,23 +315,34 @@ router.patch(
   })
 );
 
-// 회원 탈퇴
-router.delete("/quit", verification, async (req, res, next) => {
+// 회원 탈퇴 
+router.delete('/quit', verification, asyncHandle(async(req, res, next) => {
   const { userPk } = res.locals.user;
-  try {
-    await connection.beginTransaction();
-    await connection.query("DELETE FROM users WHERE userPk=?", [userPk]);
-    await connection.commit();
-    res.sendStatus(204);
-  } catch (err) {
-    await connection.rollback();
-    next(err);
-  } finally {
-    await connection.release();
-  }
-});
+  const keysToDelete = await zscanner(userPk)
+  
+  pipeline
+  // delCounts의 탈퇴유저 방 목록 삭제
+  .zrem('delCounts', keysToDelete)
+  // 탈퇴 유저방 데이터 삭제 및 유저키 값 삭제
+  .unlink(keysToDelete.push(userPk))
+  .exec()
+  .then(async(err, res) => {
+      if (err) next(err)
+      try {
+        await connection.beginTransaction()
+        await connection.query('DELETE FROM users WHERE userPk=?', [userPk])
+        await connection.commit()
+        res.sendStatus(204)
+      } catch(err) {
+        await connection.rollback()
+        next(err)
+      } finally {
+        await connection.release()
+      }
+  })
+}))
 
-router.post("/user_exists", async (req, res) => {
+router.post('/exists', async(req, res) => {
   const { userId, pNum } = req.body;
   try {
     await connection.beginTransaction();
@@ -344,7 +362,7 @@ router.post("/user_exists", async (req, res) => {
 
 // 입력한 id와 전화번호가 일치하는지 검사하는 과정 필요
 // 비밀번호 수정(p_auth에서 폰 인증문자 인증하고 -> 수정할 비밀번호 입력)
-router.post("/password", verification, async (req, res, next) => {
+router.post('/password', async (req, res, next) => {
   const { newPassword, userId } = req.body;
   const salt = crypto.randomBytes(64).toString("base64");
   const hashedPassword = crypto

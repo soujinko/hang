@@ -15,7 +15,7 @@ import fs from "fs";
 import http from "http";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
-// import Redis from "ioredis";
+import Redis from "ioredis";
 import logger from "./config/winston_config.js";
 
 dotenv.config();
@@ -47,6 +47,7 @@ const corsOption = {
 };
 
 app.use(cors(corsOption));
+app.use(morgan("dev"));
 app.use(morgan("combined", { stream: logger.stream }));
 // 헬멧은 기본적으로 15가지 보안 기능 중 11가지 기능을 제공하고, 4가지 기능은 명시적으로 사용을 지정해야한다.
 app.use(helmet());
@@ -64,4 +65,4 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
-export { server };
+export { server, redisClient };

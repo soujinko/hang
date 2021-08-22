@@ -2,9 +2,27 @@
 import supertest from 'supertest'
 // import { app } from '../index.js'
 
-test("/index.html 경로에 요청했을 때 status code가 200이어야 한다.", async () => {
-    
-    expect(1+1).toEqual(2);
+function getEmail(id, cb) {
+  setTimeout(()=>{
+    console.log('wait 0.1sec')
+    const user = {
+      id: id,
+      name: 'user' + id,
+      email: id + '@test.com',
+    };
+    cb(user)
+  })
+}
+
+
+test("test.", () => {
+  getEmail(2, (user) => {
+    expect(user).toEqual({
+      id:1,
+      name:'user1',
+      email:'1@test.com'
+    })
+  })
 });
 
 

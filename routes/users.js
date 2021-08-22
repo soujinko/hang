@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "crypto";
-import { getConnection, connection } from "../models/db.js";
+import { connection } from "../models/db.js";
 import NC_SMS from "../services/NC_SMS.js";
 import dotenv from "dotenv";
 import passport from "passport";

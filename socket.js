@@ -85,9 +85,9 @@ io.on("connection", (socket) => {
     socket.on('sendMessage', async (data) => {
       const { roomName, targetPk, message, userPk } = data;
       const curTime = Date.now()
-      // 방에 혼자 있다면
-      const currentRoom = await io.of('/').adapter.sockets(new Set([roomName]))
       
+      const currentRoom = await io.of('/').adapter.sockets(new Set([roomName]))
+      // 방에 혼자 있다면
       if (currentRoom.size < 2) {
         // 상대방에게 차단당하지 않았다면
         if (!await redis.sismember(`block:${targetPk}`, userPk)) {

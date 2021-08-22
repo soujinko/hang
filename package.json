@@ -1,11 +1,11 @@
 {
-  "name": "guidy",
+  "name": "docker_web_app",
   "version": "1.0.0",
-  "description": "final project HANG",
-  "main": "index.js",
+  "description": "Node.js on Docker",
+  "main": "server.js",
   "scripts": {
     "test": "jest",
-    "start": "npx nodemon ./index.js"
+    "start": "npx nodemon ./server.js"
   },
   "author": "변정섭 고수진",
   "license": "ISC",

@@ -1,0 +1,25 @@
+version: '3'
+services:
+    proxy:
+        restart: unless-stopped
+        image: e50fd683f692
+        ports:
+            - 80:80/tcp
+            - 443:443/tcp
+        environment:
+            CERTBOT_EMAIL: soujinko@naver.com
+            ENVSUBST_VARS: FQDN
+            FQDN: ruzan.shop
+        volumes:
+          - ./conf.d:/etc/nginx/conf.d:ro
+          - /etc/letsencrypt:/etc/letsencrypt
+    server:
+        build:
+            context: .
+            dockerfile: /home/ubuntu/hang/Dockerfile
+        working_dir: /usr/src/app
+        volumes:
+          - /home/ubuntu/hang:/usr/src/app
+
+volumes:
+    letsencrypt:

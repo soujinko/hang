@@ -13,6 +13,7 @@ import zscanner from "../functions/zscanner.js";
 dotenv.config();
 
 const router = express.Router();
+
 const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
 const options = {
   redisOptions: 

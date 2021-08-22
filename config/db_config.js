@@ -3,10 +3,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const config = {
-  host: "localhost",
-  user: "root",
-  password: process.env.DB_PASSWORD,
+  host: "3.34.95.155",
+  user: "hanghang",
+  password: PROCESS.ENV.DB_PASSWORD,
   database: "hang",
+  // debug: true,
   connectionLimit: 30,
 };
 

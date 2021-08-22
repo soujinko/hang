@@ -8,7 +8,6 @@ const router = express.Router();
 // 내 프로필, 여행 일정, 확정 약속 불러오기
 router.get("/", checkMypageRedis, async (req, res, next) => {
   try {
-    console.log("222");
     connection.beginTransaction();
     const { userPk } = res.locals.user;
     //유저의 프로필 정보 가져오기

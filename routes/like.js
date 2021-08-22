@@ -1,19 +1,19 @@
 import express from "express";
 import dotenv from "dotenv";
-import { redisClient } from "../index.js";
+// import { redisClient } from "../index.js";
 import { connection } from "../models/db.js";
-import { checkLikeRedis } from "../functions/req_look_aside.js";
+// import { checkLikeRedis } from "../functions/req_look_aside.js";
 
 dotenv.config();
 
 const router = express.Router();
 
 // 내가 좋아하는 유저리스트, 이미 redis에 있다면 미들웨어에서 반환
-router.get("/", checkLikeRedis, async (req, res) => {
+router.get("/:userPk", async (req, res) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = req.params;
-    const { userPk } = res.locals.user;
+    const { userPk } = req.params;
+    // const { userPk } = res.locals.user;
 
     const likeusers = JSON.parse(
       JSON.stringify(
@@ -23,9 +23,9 @@ router.get("/", checkLikeRedis, async (req, res) => {
         )
       )
     )[0];
-    console.log("likeusers", JSON.stringify(likeusers));
+    // console.log("likeusers", JSON.stringify(likeusers));
     // 첫 요청이면 redis 캐시 등록
-    redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
+    // redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
     res.send(likeusers);
   } catch (err) {
     console.error(err);
@@ -38,12 +38,12 @@ router.get("/", checkLikeRedis, async (req, res) => {
 });
 
 // 이미 디비에 있다면 좋아요 취소, 없다면 좋아요 등록
-router.post("/", async (req, res, next) => {
+router.post("/:userPk", async (req, res, next) => {
   let updatePk;
   try {
     connection.beginTransaction();
-    // const { userPk } = req.params;
-    const { userPk } = res.locals.user;
+    const { userPk } = req.params;
+    // const { userPk } = res.locals.user;
     updatePk = userPk;
     const { targetPk } = req.body;
     let result;
@@ -95,7 +95,7 @@ router.post("/", async (req, res, next) => {
       )
     )[0];
     console.log("findlike", findlike);
-    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
+    // redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
     connection.release();
   }
 });

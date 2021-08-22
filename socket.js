@@ -11,7 +11,13 @@ const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-const pubClient = new Redis({ password: process.env.REDIS_PASSWORD });
+const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
+const options = {
+  redisOptions: 
+  {
+    password: process.env.REDIS_PASSWORD}
+  }
+const pubClient = new Redis.Cluster(nodes, options)
 const subClient = pubClient.duplicate();
 const redis = pubClient;
 const pipeline = pubClient.pipeline();

@@ -15,7 +15,6 @@ import fs from "fs";
 import http from "http";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
-import Redis from "ioredis";
 import logger from "./config/winston_config.js";
 
 dotenv.config();
@@ -33,7 +32,6 @@ const app = express();
 
 // const server = https.createServer(options, app);
 const server = http.createServer(app);
-// const redisClient = new Redis({ password: process.env.REDIS_PASSWORD });
 
 const corsOption = {
   origin: [
@@ -57,7 +55,7 @@ app.use(express.urlencoded({ extended: false }));
 // app.use(csrfProtection({ cookie: true })); // csrfProtection은 cookieparser나 session미들웨어보다 밑에 있어야한다.
 app.use(passport.initialize());
 passportConfig();
-// app.use(/^((?!users).)*$/, verification);
+app.use(/^((?!users).)*$/, verification);
 
 app.use("/api", router);
 app.use("/docs", swaggerDocs);
@@ -65,4 +63,4 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
-export { server, redisClient };
+export { server };

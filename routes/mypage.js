@@ -1,9 +1,18 @@
 import express from "express";
 import { connection } from "../models/db.js";
 import { checkMypageRedis } from "../functions/req_look_aside.js";
-import { redisClient } from "../index.js";
+import Redis from "ioredis";
 
 const router = express.Router();
+
+const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
+const options = {
+  redisOptions: 
+  {
+    password: process.env.REDIS_PASSWORD}
+  }
+
+const redis = new Redis.Cluster(nodes, options)
 
 // 내 프로필, 여행 일정, 확정 약속 불러오기
 router.get("/", checkMypageRedis, async (req, res, next) => {
@@ -26,12 +35,12 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
     )[0];
     connection.commit();
 
-    await redisClient.hmset(`mypage-${userPk}`, {
+    await redis.hmset(`mypage-${userPk}`, {
       userInfo: JSON.stringify(userInfo),
       tripInfo: JSON.stringify(tripInfo),
     });
     // 유효기간 1일
-    await redisClient.expire(`mypage-${userPk}`, 86400);
+    await redis.expire(`mypage-${userPk}`, 86400);
     res.send({ userInfo, tripInfo });
   } catch (err) {
     console.log(err);
@@ -212,7 +221,7 @@ router.post("/create_trip", async (req, res, next) => {
       )[0];
 
       let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         tripInfo: JSON.stringify(NewTripInfo),
       });
 
@@ -283,7 +292,7 @@ router.delete("/", async (req, res, next) => {
           await connection.query("select * from trips where userPk=?", [userPk])
         )
       )[0];
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         tripInfo: JSON.stringify(tripInfo),
       });
 
@@ -331,7 +340,7 @@ router.patch("/update_guide", async (req, res, next) => {
           ])
         )
       )[0][0];
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(userInfo),
       });
       res.status(200).send();
@@ -370,7 +379,7 @@ router.patch("/", async (req, res, next) => {
         )
       )[0][0];
 
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(newMyProfile),
       });
       res.status(201).send();

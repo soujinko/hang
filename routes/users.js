@@ -13,7 +13,14 @@ import zscanner from "../functions/zscanner.js";
 dotenv.config();
 
 const router = express.Router();
-const redis = new Redis({password:process.env.REDIS_PASSWORD})
+const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
+const options = {
+  redisOptions: 
+  {
+    password: process.env.REDIS_PASSWORD}
+  }
+
+const redis = new Redis.Cluster(nodes, options)
 const pipeline = redis.pipeline()
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
@@ -29,24 +36,19 @@ router.post("/sms_auth", (req, res, next) => {
           (err, data) => {
             if (err) throw err;
             if (data.length > 0) return res.sendStatus(409);
-
-            // const authNumber = Math.floor(Math.random() * 90000) + 10000;
-            // NC_SMS(req, next, authNumber);
-            
+            const authNumber = Math.floor(Math.random() * 90000) + 10000;
+            NC_SMS(req, next, authNumber);
             // redis에 저장
-            
-            // redis.zadd('auth', authNumber, phoneNumber)
+            redis.zadd('auth', authNumber, phoneNumber)
             res.sendStatus(200);
           }
         );
       // 비밀번호 찾기라면
       } else {
-        // const authNumber = Math.floor(Math.random() * 90000) + 10000;
-        // NC_SMS(req, next, authNumber);
-        
+        const authNumber = Math.floor(Math.random() * 90000) + 10000;
+        NC_SMS(req, next, authNumber);
         // redis에 저장
-        
-        // redis.zadd('auth', authNumber, phoneNumber)
+        redis.zadd('auth', authNumber, phoneNumber)
         res.sendStatus(200);
       }
     } catch (err) {
@@ -63,8 +65,8 @@ router.post(
   asyncHandle(async (req, res, next) => {
     const { pNum: phoneNumber, aNum: authNumber } = req.body;
     // redis 데이터 불러와서 비교
-    // const storedAuthNumber = await redis.zscore('auth', phoneNumber)
-    // authNumber === storedAuthNumber ? res.sendStatus(200) : res.sendStatus(406)
+    const storedAuthNumber = await redis.zscore('auth', phoneNumber)
+    authNumber === storedAuthNumber ? res.sendStatus(200) : res.sendStatus(406)
     res.sendStatus(200);
   })
 );
@@ -241,22 +243,22 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
           obj['profileImg'] = nickAndProf[0][0].profileImg
           obj['targetPk'] = +v
           }
-        } else {
-          obj["unchecked"] = chatList[i];
-          result.push(obj);
-          obj = {};
         }
+      } else {
+        obj['unchecked'] = chatList[i]
+        result.push(obj)
+        obj = {}
       }
-      console.log(result);
-      res.status(200).json({ result });
-    } catch (err) {
-      await connection.rollback();
-      next(err);
-    } finally {
-      await connection.release();
     }
-  })
-);
+    console.log(result)
+    res.status(200).json({result})
+  } catch(err) {
+    await connection.rollback()
+    next(err)
+  } finally {
+    await connection.release()
+  }
+}))
 
 // 차단한 사람들의 정보 가져오기
 router.get(

@@ -17,6 +17,7 @@ const options = {
   {
     password: process.env.REDIS_PASSWORD}
   }
+  
 const pubClient = new Redis.Cluster(nodes, options)
 const subClient = pubClient.duplicate();
 const redis = pubClient;
@@ -67,7 +68,8 @@ io.on("connection", (socket) => {
 
     socket.username = nickname;
     const roomName =
-      (joiningUserPk < targetUserPk && `${joiningUserPk}:${targetUserPk}`) ||
+      joiningUserPk < targetUserPk && 
+      `${joiningUserPk}:${targetUserPk}` ||
       `${targetUserPk}:${joiningUserPk}`;
 
     pipeline

@@ -1,8 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
-// import { redisClient } from "../index.js";
 import { connection } from "../models/db.js";
-// import { checkLikeRedis } from "../functions/req_look_aside.js";
+
 
 dotenv.config();
 

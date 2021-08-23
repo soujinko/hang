@@ -7,21 +7,12 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-import Redis from "ioredis";
+import redis from '../config/redis.cluster.config.js'
 import zscanner from "../functions/zscanner.js";
 
 dotenv.config();
 
 const router = express.Router();
-
-const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
-const options = {
-  redisOptions: 
-  {
-    password: process.env.REDIS_PASSWORD}
-  }
-
-const redis = new Redis.Cluster(nodes, options)
 const pipeline = redis.pipeline()
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {

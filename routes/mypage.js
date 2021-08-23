@@ -1,18 +1,9 @@
 import express from "express";
 import { connection } from "../models/db.js";
 import { checkMypageRedis } from "../functions/req_look_aside.js";
-import Redis from "ioredis";
+import redis from '../config/redis.cluster.config.js'
 
 const router = express.Router();
-
-const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
-const options = {
-  redisOptions: 
-  {
-    password: process.env.REDIS_PASSWORD}
-  }
-
-const redis = new Redis.Cluster(nodes, options)
 
 // 내 프로필, 여행 일정, 확정 약속 불러오기
 router.get("/", checkMypageRedis, async (req, res, next) => {

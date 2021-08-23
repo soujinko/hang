@@ -2,25 +2,14 @@ import { Server } from "socket.io";
 import { connection } from "./models/db.js";
 import { server } from "./index.js";
 import redisAdapter from "@socket.io/redis-adapter";
-import Redis from "ioredis";
-import dotenv from "dotenv";
-
-dotenv.config();
+import redis from './config/redis.cluster.config.js'
 
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-const nodes = [{port:6379, host:'redis'}, {port:6380, host:'redis'}]
-const options = {
-  redisOptions: 
-  {
-    password: process.env.REDIS_PASSWORD}
-  }
-  
-const pubClient = new Redis.Cluster(nodes, options)
+const pubClient = redis
 const subClient = pubClient.duplicate();
-const redis = pubClient;
 const pipeline = pubClient.pipeline();
 
 io.adapter(redisAdapter(pubClient, subClient));

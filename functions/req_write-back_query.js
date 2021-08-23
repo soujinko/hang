@@ -2,13 +2,8 @@
 // DEL은 연산동안 redis가 정지하므로 background에서 별도의 thread로 처리되는 unlink사용
 // 마찬가지의 원리로 백업시 SAVE가 아닌 BGSAVE하여야 함
 
-import Redis from 'ioredis'
-import dotenv from 'dotenv'
+import redis from '../config/redis.cluster.config.js'
 import { getConnection } from '../models/db.js'
-
-dotenv.config()
-
-const redis = new Redis({ password:process.env.REDIS_PASSWORD })
 
 // cursor가 0이 될때까지 while을 돕니다. 모든 key를 얻기 위해
 const getAllMatchingKeys = async (userPk, next) => {

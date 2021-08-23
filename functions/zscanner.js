@@ -1,9 +1,4 @@
-import Redis from 'ioredis'
-import dotenv from 'dotenv'
-
-dotenv.config()
-
-const redis = new Redis({password:process.env.REDIS_PASSWORD})
+import redis from '../config/redis.cluster.config.js'
 
 const zscanner = async(key) => {
   let init = 0

@@ -25,7 +25,7 @@ router.get("/:userPk", async (req, res) => {
     )[0];
     // console.log("likeusers", JSON.stringify(likeusers));
     // 첫 요청이면 redis 캐시 등록
-    // redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
+    redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
     res.send(likeusers);
   } catch (err) {
     console.error(err);
@@ -38,12 +38,11 @@ router.get("/:userPk", async (req, res) => {
 });
 
 // 이미 디비에 있다면 좋아요 취소, 없다면 좋아요 등록
-router.post("/:userPk", async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   let updatePk;
   try {
     connection.beginTransaction();
-    const { userPk } = req.params;
-    // const { userPk } = res.locals.user;
+    const { userPk } = res.locals.user;
     updatePk = userPk;
     const { targetPk } = req.body;
     let result;
@@ -95,7 +94,7 @@ router.post("/:userPk", async (req, res, next) => {
       )
     )[0];
     console.log("findlike", findlike);
-    // redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
+    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 3600);
     connection.release();
   }
 });

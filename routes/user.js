@@ -6,7 +6,6 @@ const router = express.Router();
 router.get("/:pagePk", async (req, res, next) => {
   try {
     connection.beginTransaction();
-
     const { userPk } = res.locals.user;
     const { pagePk } = req.params;
     // const finduser = `select * from userView where userPk ='${pagePk}'`;

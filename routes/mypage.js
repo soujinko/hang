@@ -10,11 +10,14 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
+    const { pagePk } = req.params;
+    let likeBoolean;
+
     //유저의 프로필 정보 가져오기
     const userInfo = JSON.parse(
       JSON.stringify(
         await connection.query(`select * from userView where userPk=?`, [
-          userPk,
+          pagePk,
         ])
       )
     )[0][0];
@@ -24,15 +27,37 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
         await connection.query(`select * from trips where userPk =?`, [userPk])
       )
     )[0];
-    connection.commit();
+    const findlikes = JSON.parse(
+      JSON.stringify(
+        await connection.query(`select targetPk from likes where userPk =?`, [
+          userPk,
+        ])
+      )
+    )[0].map((e) => parseInt(e.targetPk));
+    console.log("findlikes1", findlikes);
 
-    await redisClient.hmset(`mypage-${userPk}`, {
-      userInfo: JSON.stringify(userInfo),
-      tripInfo: JSON.stringify(tripInfo),
-    });
-    // 유효기간 1일
-    await redisClient.expire(`mypage-${userPk}`, 86400);
-    res.send({ userInfo, tripInfo });
+    if (userPk === pagePk) {
+      await redisClient.hmset(`mypage-${userPk}`, {
+        userInfo: JSON.stringify(userInfo),
+        tripInfo: JSON.stringify(tripInfo),
+        likes: JSON.stringify(findlikes),
+      });
+      // 유효기간 1일
+      await redisClient.expire(`mypage-${userPk}`, 86400);
+      res.send({ userInfo, tripInfo });
+    } else {
+      let likeBoolean = findlikes.includes(parseInt(pagePk)) ? true : false;
+
+      await redisClient.hmset(`mypage-${pagePk}`, {
+        userInfo: JSON.stringify(userInfo),
+        tripInfo: JSON.stringify(tripInfo),
+      });
+      // 유효기간 1일
+      await redisClient.expire(`mypage-${pagePk}`, 86400);
+      res.send({ userInfo, tripInfo, likeBoolean });
+    }
+
+    connection.commit();
   } catch (err) {
     console.log(err);
     connection.rollback();

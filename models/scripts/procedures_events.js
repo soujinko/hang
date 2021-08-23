@@ -8,21 +8,9 @@
  */
 import { connection } from "../db.js";
 
-// const DBCleanerProc = `DELIMITER $$
-//                       CREATE PROCEDURE IF NOT EXISTS
-//                       DBCleaner()
-//                       BEGIN
-//                       DELETE FROM trips
-//                       WHERE TIMESTAMPDIFF(DAY, endDate, CURRENT_TIMESTAMP) > 0
-//                       END $$
-//                       DELIMITER $$;`
+const DBCleanerProc = `DELIMITER $$ CREATE PROCEDURE IF NOT EXISTS DBCleaner() BEGIN DELETE FROM trips WHERE TIMESTAMPDIFF(DAY, endDate, CURRENT_TIMESTAMP) > 0 END $$ DELIMITER $$;`;
 
-// const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleaner
-//                         ON SCHEDULE EVERY 24 hour
-//                         ON COMPLETION PRESERVE
-//                         STARTS NOW()
-//                         DO CALL
-//                         DBCleaner();`
+const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleaner ON SCHEDULE EVERY 24 hour ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
 
 async function keepAlive() {
   try {

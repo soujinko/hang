@@ -1,19 +1,18 @@
 import express from "express";
 import dotenv from "dotenv";
-// import { redisClient } from "../index.js";
+import { redisClient } from "../index.js";
 import { connection } from "../models/db.js";
-// import { checkLikeRedis } from "../functions/req_look_aside.js";
+import { checkLikeRedis } from "../functions/req_look_aside.js";
 
 dotenv.config();
 
 const router = express.Router();
 
 // 내가 좋아하는 유저리스트, 이미 redis에 있다면 미들웨어에서 반환
-router.get("/:userPk", async (req, res) => {
+router.get("/", checkLikeRedis, async (req, res) => {
   try {
     connection.beginTransaction();
-    const { userPk } = req.params;
-    // const { userPk } = res.locals.user;
+    const { userPk } = res.locals.user;
 
     const likeusers = JSON.parse(
       JSON.stringify(
@@ -23,7 +22,6 @@ router.get("/:userPk", async (req, res) => {
         )
       )
     )[0];
-    // console.log("likeusers", JSON.stringify(likeusers));
     // 첫 요청이면 redis 캐시 등록
     redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
     res.send(likeusers);
@@ -94,6 +92,12 @@ router.post("/", async (req, res, next) => {
       )
     )[0];
     console.log("findlike", findlike);
+    // 레디스 마이페이지 해시 좋아요 리스트 업데이트
+    const updatelike = findlike.map((e) => e.userPk);
+    await redisClient.hmset(`mypage-${userPk}`, {
+      likes: JSON.stringify(updatelike),
+    });
+    // 좋아요 추가 시 다시 좋아요 데이터 세팅 / 유지시간 1시간
     redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 3600);
     connection.release();
   }

@@ -1,5 +1,6 @@
 import express from "express";
 import { connection } from "../models/db.js";
+import checkDate from "../functions/checkDatefunc.js";
 
 const router = express.Router();
 
@@ -45,11 +46,10 @@ router.post("/:userPk", async (req, res, next) => {
     let endMyDate = Date.parse(endDate);
     let today = new Date();
     today = today.toISOString().slice(0, 10);
-
+    // 오늘날짜 이전 선택 안되게
     if (startMyDate < Date.parse(today)) {
       throw new Error("날짜 오류");
     }
-
     const checkTrip = JSON.parse(
       JSON.stringify(
         await connection.query(
@@ -58,10 +58,12 @@ router.post("/:userPk", async (req, res, next) => {
       )
     )[0];
 
+    // 해당여행 정보 없으면 에러
     if (checkTrip.length === 0) {
       throw new Error("여행 정보 없음");
     }
 
+    // 이미 요청한 약속이면 에러
     const requestExist = JSON.parse(
       JSON.stringify(
         await connection.query(
@@ -69,47 +71,28 @@ router.post("/:userPk", async (req, res, next) => {
         )
       )
     )[0];
-
     if (requestExist.length > 0) {
       throw new Error("이미 가이드를 요청했어요");
     }
+    // 나의 확정 약속과 겹치면 false 안겹치면 true
+    const checkDates = await checkDate(userPk, startMyDate, endMyDate);
 
-    const userTripDates = JSON.parse(
-      JSON.stringify(
-        await connection.query(
-          `SELECT LEFT(startDate, 10), LEFT(endDate, 10), tripId FROM trips WHERE userPk=${pagePk} OR partner=${pagePk}`
-        )
-      )
-    )[0].map((e) => [e["left(startDate, 10)"], e["left(endDate, 10)"]]);
+    const insertRequest = async () => {
+      if (checkDates) {
+        const result = await connection.query(
+          `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
+        );
+        if (result[0].affectedRows === 0) throw new Error();
 
-    let count = 0;
-    userTripDates.forEach((e) => {
-      let startOld = Date.parse(e[0]);
-      let endOld = Date.parse(e[1]);
-      if (startMyDate > startOld && startMyDate < endOld) {
-        throw new Error("날짜 겹침1");
-      } else if (endMyDate > startOld && endMyDate < endOld) {
-        throw new Error("날짜 겹침2");
-      } else if (startMyDate <= startOld && endMyDate >= endOld) {
-        throw new Error("날짜 겹침3");
-      } else {
-        count += 1;
-        console.log("count", count);
-      }
-    });
-
-    if (count === userTripDates.length) {
-      const result = await connection.query(
-        `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
-      );
-
-      if (result[0].affectedRows === 0) {
-        throw new Error("디비 등록하다 오류");
-      } else {
         await connection.commit();
         res.status(201).send();
+      } else {
+        throw new Error();
       }
-    }
+    };
+
+    // 약속 데이터 등록
+    insertRequest();
   } catch (err) {
     console.error(err);
     await connection.rollback();

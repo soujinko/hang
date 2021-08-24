@@ -220,15 +220,16 @@ router.post("/create_trip", async (req, res, next) => {
       throw new Error("날짜 선택 오류");
     }
 
-    // 내가 등록하 여행 날짜 리스트와 나를 파트너로 등록한 여행 날짜 리스트
-    const myTripDates = JSON.parse(
-      JSON.stringify(
-        await connection.query(
-          `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=? or partner=?`,
-          [userPk, userPk]
-        )
-      )
-    )[0];
+    // // 내가 등록하 여행 날짜 리스트와 나를 파트너로 등록한 여행 날짜 리스트
+    // const myTripDates = JSON.parse(
+    //   JSON.stringify(
+    //     await connection.query(
+    //       `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=? or partner=?`,
+    //       [userPk, userPk]
+    //     )
+    //   )
+    // )[0];
+
     //  새 여행 저장하는 함수, 레디스 디비 업데이트
     const saveNewTrip = async (tripInfo) => {
       await connection.query(
@@ -251,38 +252,39 @@ router.post("/create_trip", async (req, res, next) => {
       res.status(201).send({ newTripId });
     };
 
-    if (myTripDates.length > 0) {
-      let myTripDates2 = myTripDates.map((e) => [
-        e["left(startDate, 10)"],
-        e["left(endDate, 10)"],
-      ]);
+    // if (myTripDates.length > 0) {
+    //   let myTripDates2 = myTripDates.map((e) => [
+    //     e["left(startDate, 10)"],
+    //     e["left(endDate, 10)"],
+    //   ]);
 
-      // 만약 내 여행일정과 겹치면 에러
-      let count = 0;
-      myTripDates2.forEach((e) => {
-        let startOld = Date.parse(e[0]);
-        let endOld = Date.parse(e[1]);
-        // console.log("start, end date", startOld, endOld);
-        if (startNewDate > startOld && startNewDate < endOld) {
-          throw new Error("날짜 겹침");
-        } else if (endNewDate > startOld && endNewDate < endOld) {
-          throw new Error("날짜 겹침");
-        } else if (startNewDate <= startOld && endNewDate >= endOld) {
-          throw new Error("날짜 겹침");
-        } else {
-          count += 1;
-        }
-      });
-      // db에 여행 등록
-      if (count === myTripDates2.length) {
-        saveNewTrip(tripInfo);
-      } else {
-        throw new Error("반복문 돌다가 오류");
-      }
-    } else {
-      // 확정 약속과 일정 안겹치면 새 여행 등록
+    // 만약 내 여행일정과 겹치면 에러
+    // let count = 0;
+    // myTripDates2.forEach((e) => {
+    //   let startOld = Date.parse(e[0]);
+    //   let endOld = Date.parse(e[1]);
+    //   // console.log("start, end date", startOld, endOld);
+    //   if (startNewDate > startOld && startNewDate < endOld) {
+    //     throw new Error("날짜 겹침");
+    //   } else if (endNewDate > startOld && endNewDate < endOld) {
+    //     throw new Error("날짜 겹침");
+    //   } else if (startNewDate <= startOld && endNewDate >= endOld) {
+    //     throw new Error("날짜 겹침");
+    //   } else {
+    //     count += 1;
+    //   }
+    // });
+
+    // 나의 확정 약속과 겹치면 false 안겹치면 true
+    const checkDates = await checkDate(userPk, startNewDate, endNewDate);
+
+    if (checkDates) {
+      // 겹치는 약속 없으명 db 저장 함수 호출
       saveNewTrip(tripInfo);
+    } else {
+      throw new Error("반복문 돌다가 오류");
     }
+
     // `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`
   } catch (err) {
     console.error("에러메시지 확인", err.message);
@@ -471,7 +473,7 @@ router.patch("/reject_confirm", async (req, res, next) => {
   }
 });
 
-// 나의 약속 확정
+// 나의 약속 확정 // 중복수락 안되게
 router.post("/make_promise", async (req, res, next) => {
   try {
     connection.beginTransaction();
@@ -480,13 +482,21 @@ router.post("/make_promise", async (req, res, next) => {
     let setPartner;
 
     // 해당 여행의 주인 pk
-    const ownerPk = JSON.parse(
+    const tripInfo = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select userPk from trips where tripId=${tripId}`
+          `select userPk, startDate, endDate from trips where tripId=${tripId}`
         )
       )
-    )[0][0]["userPk"];
+    )[0][0];
+    let { startDate, endDate } = tripInfo;
+    let ownerPk = tripInfo.userPk;
+    startDate = Date.parse(startDate.slice(0, 10));
+    endDate = Date.parse(endDate.slice(0, 10));
+
+    // 나의 확정 약속과 겹치면 false 안겹치면 true
+    await checkDate(userPk, startDate, endDate);
+
     // 약속 받은, 요청한 pk 찾기
     const getPks = JSON.parse(
       JSON.stringify(
@@ -495,7 +505,7 @@ router.post("/make_promise", async (req, res, next) => {
         )
       )
     )[0][0];
-    // console.log(userPk, ownerPk, getPks.reqPk, getPks.recPk, getPks);
+
     if (userPk !== getPks.reqPk && userPk !== getPks.recPk) {
       throw new Error("나와 관련된 약속이 아닙니다");
     }

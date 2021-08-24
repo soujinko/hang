@@ -55,14 +55,12 @@ router.get("/profile/:pagePk", checkMypageRedis, async (req, res, next) => {
     } else {
       console.log("유저 페이지 레디스 저장");
       userInfo.like = findlikes.includes(parseInt(pagePk)) ? true : false;
-
       await redisClient.hmset(`mypage-${pagePk}`, {
         userInfo: JSON.stringify(userInfo),
         tripInfo: JSON.stringify(tripInfo),
       });
       // 유효기간 1일
       await redisClient.expire(`mypage-${pagePk}`, 86400);
-      console.log("유저페이지", userInfo, tripInfo, likeBoolean);
       res.send({ userInfo, tripInfo });
     }
 

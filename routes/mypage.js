@@ -1,7 +1,7 @@
 import express from "express";
 import { connection } from "../models/db.js";
 import { checkMypageRedis } from "../functions/req_look_aside.js";
-import { redisClient } from "../index.js";
+import redis from "../config/redis.cluster.config.js";
 
 const router = express.Router();
 
@@ -245,7 +245,7 @@ router.post("/create_trip", async (req, res, next) => {
       )[0];
 
       let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         tripInfo: JSON.stringify(NewTripInfo),
       });
 
@@ -317,7 +317,7 @@ router.delete("/", async (req, res, next) => {
           await connection.query("select * from trips where userPk=?", [userPk])
         )
       )[0];
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         tripInfo: JSON.stringify(tripInfo),
       });
 
@@ -365,7 +365,7 @@ router.patch("/update_guide", async (req, res, next) => {
           ])
         )
       )[0][0];
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(userInfo),
       });
       res.status(200).send();
@@ -404,7 +404,7 @@ router.patch("/", async (req, res, next) => {
         )
       )[0][0];
 
-      await redisClient.hmset(`mypage-${userPk}`, {
+      await redis.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(newMyProfile),
       });
       res.status(201).send();

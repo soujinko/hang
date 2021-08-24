@@ -2,19 +2,15 @@ import { Server } from "socket.io";
 import { connection } from "./models/db.js";
 import { server } from "./index.js";
 import redisAdapter from "@socket.io/redis-adapter";
-import Redis from "ioredis";
-import dotenv from "dotenv";
-
-dotenv.config();
+import redis from './config/redis.cluster.config.js'
 
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-const pubClient = new Redis({ password: process.env.REDIS_PASSWORD });
+const pubClient = redis
 const subClient = pubClient.duplicate();
-const redis = pubClient;
-const pipeline = pubClient.pipeline();
+const multi = pubClient.multi();
 
 io.adapter(redisAdapter(pubClient, subClient));
 
@@ -61,10 +57,11 @@ io.on("connection", (socket) => {
 
     socket.username = nickname;
     const roomName =
-      (joiningUserPk < targetUserPk && `${joiningUserPk}:${targetUserPk}`) ||
+      joiningUserPk < targetUserPk && 
+      `${joiningUserPk}:${targetUserPk}` ||
       `${targetUserPk}:${joiningUserPk}`;
 
-    pipeline
+    multi
       .zadd(joiningUserPk + "", 0, roomName)
       .zadd("delCounts", "NX", 0, roomName)
       .lrange(roomName, 0, -1, async (err, chatLogs) => {
@@ -125,8 +122,8 @@ io.on("connection", (socket) => {
       curTime: curTime,
     });
 
-    redis.zadd("delCounts", "GT", 1, roomName);
-    redis
+    multi
+      .zadd("delCounts", "GT", 1, roomName)
       .rpush(roomName, log)
       .then(
         async (res) =>
@@ -154,7 +151,7 @@ io.on("connection", (socket) => {
   socket.on("leave", (data) => {
     const { userPk, roomName } = data;
 
-    pipeline
+    multi
       // 자신이 방금 나온 방의 읽지 않은 갯수는 0으로
       .zadd(userPk + "", "XX", 0, roomName)
       // 메세지 100개로 제한.
@@ -169,14 +166,16 @@ io.on("connection", (socket) => {
       );
   });
 
-  socket.on("ByeBye", (data) => {
+  socket.on("quit", (data) => {
     const { userPk, roomName } = data;
     // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터는 delCount 0일 경우 삭제
-    pipeline
+    multi
       .zscore("delCounts", roomName, (err, delCount) => {
         if (+delCount < 1) {
-          redis.del(roomName);
-          redis.zrem("delCounts", roomName);
+          multi
+          .del(roomName)
+          .zrem("delCounts", roomName)
+          .exec()
         } else redis.zadd("delCounts", "LT", 0, roomName);
       })
       .zrem(userPk + "", roomName)

@@ -1,4 +1,4 @@
-import { redisClient } from "../index.js";
+import redis from "../config/redis.cluster.config.js";
 
 const checkMypageRedis = (req, res, next) => {
   const { userPk } = res.locals.user;

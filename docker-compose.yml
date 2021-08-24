@@ -11,6 +11,9 @@ services:
             ENVSUBST_VARS: FQDN
             FQDN: ruzan.shop
         volumes:
+          - /home/ubuntu/nginx/cache:/etc/nginx/cache
+          - /home/ubuntu/nginx/temp:/etc/nginx/temp
+          - .:/etc/nginx/
           - ./conf.d:/etc/nginx/conf.d:ro
           - /etc/letsencrypt:/etc/letsencrypt
     server:

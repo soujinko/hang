@@ -42,28 +42,43 @@ const searchAndPaginate = async (req, userPk, next) => {
     let sequel = `SELECT a.userPk, nickname, age, gender, region, city, profileImg, 
                  CASE WHEN a.userPk IN 
                  (SELECT targetPk FROM likes WHERE userPk = ?) 
-                 THEN 1 ELSE 0 END 'like'
+                 THEN 1 ELSE 0 END 'like' 
                  FROM (SELECT userPk FROM users WHERE userPk != ?`;
     let inputs = [userPk, userPk]
 
     if (keyword || region || city || guide || traveler) {
+      // 공통사항인 keyword부터
       if (keyword) {
         sequel += ` AND MATCH(nickname) AGAINST(? IN BOOLEAN MODE)`;
         inputs.push(keyword+'*')
       }
+      // traveler가 true라면 city, region을 trips에서 검색해야 한다
+      if (traveler) {
+        sequel += ` AND userPk IN (SELECT userPk FROM trips`
+        
+        const options = [region, city]
+        const sequelAddOns = [' region=?', ' city=?']
+        
+        for (let [i, v] of Object.entries(options)) {
+          if (v) {
+            sequel.slice(-5) === 'trips' ? sequel += ' WHERE' + sequelAddOns[i] : sequel += ' AND' + sequelAddOns[i]
+            inputs.push(options[i])
+          }
+        }
+        sequel += `)`
+      } else {
+        const options = [region, city, guide];
+        const sequelAddOns = [
+          ` AND region=?`,
+          ` AND city=?`,
+          ` AND guide=?`,
+        ];
 
-      const options = [region, city, guide, traveler];
-      const sequelAddOns = [
-        ` AND region=?`,
-        ` AND city=?`,
-        ` AND guide=?`,
-        ` AND userPk IN (SELECT userPk FROM trips)`,
-      ];
-
-      for (let [i, v] of Object.entries(options)) {
-        if (v) {
-          sequel += sequelAddOns[i];
-          if (i < 3) inputs.push(options[i])
+        for (let [i, v] of Object.entries(options)) {
+          if (v) {
+            sequel += sequelAddOns[i];
+            inputs.push(options[i])
+          }
         }
       }
     }

@@ -6,12 +6,17 @@ import { redisClient } from "../index.js";
 const router = express.Router();
 
 // 내 프로필, 여행 일정, 확정 약속 불러오기
-router.get("/", checkMypageRedis, async (req, res, next) => {
+router.get("/profile/:pagePk", checkMypageRedis, async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
     const { pagePk } = req.params;
-    let likeBoolean;
+    console.log("유저상세페이지", userPk, pagePk);
+    if (userPk === pagePk) {
+      console.log(true);
+    } else {
+      console.log(false);
+    }
 
     //유저의 프로필 정보 가져오기
     const userInfo = JSON.parse(
@@ -24,7 +29,7 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
     // 여행정보 가져오기
     const tripInfo = JSON.parse(
       JSON.stringify(
-        await connection.query(`select * from trips where userPk =?`, [userPk])
+        await connection.query(`select * from trips where userPk =?`, [pagePk])
       )
     )[0];
     const findlikes = JSON.parse(
@@ -36,7 +41,8 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
     )[0].map((e) => parseInt(e.targetPk));
     console.log("findlikes1", findlikes);
 
-    if (userPk === pagePk) {
+    if (parseInt(userPk) === parseInt(pagePk)) {
+      console.log("마이페이지 레디스 저장");
       await redisClient.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(userInfo),
         tripInfo: JSON.stringify(tripInfo),
@@ -44,9 +50,11 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
       });
       // 유효기간 1일
       await redisClient.expire(`mypage-${userPk}`, 86400);
+      console.log("마이페이지", userInfo, tripInfo);
       res.send({ userInfo, tripInfo });
     } else {
-      let likeBoolean = findlikes.includes(parseInt(pagePk)) ? true : false;
+      console.log("유저 페이지 레디스 저장");
+      userInfo.like = findlikes.includes(parseInt(pagePk)) ? true : false;
 
       await redisClient.hmset(`mypage-${pagePk}`, {
         userInfo: JSON.stringify(userInfo),
@@ -54,7 +62,8 @@ router.get("/", checkMypageRedis, async (req, res, next) => {
       });
       // 유효기간 1일
       await redisClient.expire(`mypage-${pagePk}`, 86400);
-      res.send({ userInfo, tripInfo, likeBoolean });
+      console.log("유저페이지", userInfo, tripInfo, likeBoolean);
+      res.send({ userInfo, tripInfo });
     }
 
     connection.commit();
@@ -75,11 +84,11 @@ router.get("/promise", async (req, res, next) => {
     const { userPk } = res.locals.user;
     let confirmed = [];
 
-    // 나를 파트너로 등록한, 혹은 내가 파트너를 등록한 여행 리스트
+    // 나를 파트너로 등록한, 혹은 내가 파트너를 등록한 여행 리스트  / 날짜순으로 가져오기
     const confirmTripList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select * from trips where (userPk =? and partner is not null) or partner=?`,
+          `select * from trips where (userPk =? and partner is not null) or partner=? ORDER BY startDate`,
           [userPk, userPk]
         )
       )
@@ -125,11 +134,11 @@ router.get("/promise", async (req, res, next) => {
       });
     }
 
-    // 내가 요청한 리스트 디비 조회
+    // 내가 요청한 리스트 디비 조회 / 약속 신청 최신순으로 가져오기
     const reqList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.recPk where b.reqPk=?`,
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.recPk where b.reqPk=? ORDER BY b.requestId DESC`,
           [userPk]
         )
       )
@@ -139,7 +148,7 @@ router.get("/promise", async (req, res, next) => {
     const recList = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=?`,
+          `select a.*, b.tripId, b.requestId from userView a left join requests b on a.userPk = b.reqPk where b.recPk=? ORDER BY b.requestId DESC`,
           [userPk]
         )
       )
@@ -257,11 +266,11 @@ router.post("/create_trip", async (req, res, next) => {
         let endOld = Date.parse(e[1]);
         // console.log("start, end date", startOld, endOld);
         if (startNewDate > startOld && startNewDate < endOld) {
-          throw new Error("날짜 겹침1");
+          throw new Error("날짜 겹침");
         } else if (endNewDate > startOld && endNewDate < endOld) {
-          throw new Error("날짜 겹침2");
+          throw new Error("날짜 겹침");
         } else if (startNewDate <= startOld && endNewDate >= endOld) {
-          throw new Error("날짜 겹침3");
+          throw new Error("날짜 겹침");
         } else {
           count += 1;
         }

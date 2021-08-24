@@ -3,20 +3,21 @@ import { redisClient } from "../index.js";
 const checkMypageRedis = (req, res, next) => {
   const { userPk } = res.locals.user;
   const { pagePk } = req.params;
-  if (userPk === pagePk) {
+  console.log("레디스 확인", userPk, pagePk);
+  if (parseInt(userPk) === parseInt(pagePk)) {
+    console.log("마이페이지 레디스");
     redisClient.hget(
       `mypage-${userPk}`,
       "userInfo",
       function (error, userInfo) {
-        if (error) res.status(400).send(error);
-        console.log("레디스 데이터", userInfo);
-
+        if (error) next();
         if (userInfo) {
           redisClient.hget(
             `mypage-${userPk}`,
             "tripInfo",
             function (error, tripInfo) {
-              console.log("레디스 데이터", tripInfo);
+              if (error) next();
+              console.log("레디스 데이터-마이페이지", userInfo, tripInfo);
               tripInfo = JSON.parse(tripInfo);
               userInfo = JSON.parse(userInfo);
               res.send({ userInfo, tripInfo });
@@ -26,28 +27,39 @@ const checkMypageRedis = (req, res, next) => {
       }
     );
   } else {
+    console.log("유저페이지 레디스");
     redisClient.hget(
       `mypage-${pagePk}`,
       "userInfo",
       function (error, userInfo) {
-        if (error) res.status(400).send(error);
-        console.log("레디스 데이터", userInfo);
-
+        if (error) next();
         if (userInfo) {
           redisClient.hget(
             `mypage-${pagePk}`,
             "tripInfo",
             function (error, tripInfo) {
-              console.log("레디스 데이터", tripInfo);
+              if (error) next();
               redisClient.hget(
                 `mypage-${userPk}`,
                 "likes",
-                function (error, userInfo) {
-                  likes = JSON.parse(likes);
-                  const likeBoolean = likes.includes(pagePk) ? true : false;
-                  tripInfo = JSON.parse(tripInfo);
-                  userInfo = JSON.parse(userInfo);
-                  res.send({ userInfo, tripInfo, likeBoolean });
+                function (error, likes) {
+                  if (error) next();
+                  if (likes) {
+                    const likes2 = JSON.parse(likes);
+                    tripInfo = JSON.parse(tripInfo);
+                    userInfo = JSON.parse(userInfo);
+                    userInfo.like = likes2.includes(parseInt(pagePk))
+                      ? true
+                      : false;
+
+                    console.log(
+                      "레디스 데이터-유저상세",
+                      userInfo,
+                      tripInfo,
+                      likes2
+                    );
+                    res.send({ userInfo, tripInfo });
+                  } else next();
                 }
               );
             }

@@ -1,8 +1,5 @@
 import { connection } from "../models/db.js";
-import Redis from "ioredis"
-import dotenv from 'dotenv'
-
-dotenv.config()
+import redis from '../config/redis.cluster.config.js'
 
 /**
  * For faster query, we applied:
@@ -37,8 +34,6 @@ dotenv.config()
  * 
  * 21/08/15 We added ngram parser to the full text index to search in 'word boundaries' so called
  */
-
-const redis = new Redis({password:process.env.REDIS_PASSWORD})
 
 const searchAndPaginate = async (req, userPk, next) => {
   const { keyword, region, city, traveler, guide, pageNum } = req.body;

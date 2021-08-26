@@ -7,14 +7,13 @@ import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-import Redis from 'ioredis'
+import redis from '../config/redis.cluster.config.js'
 import zscanner from '../functions/zscanner.js'
 
 dotenv.config();
 
 const router = express.Router();
-const redis = new Redis({password:process.env.REDIS_PASSWORD})
-const pipeline = redis.pipeline()
+const pipeline = redis.pipeline();
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
   const { pNum: phoneNumber, status } = req.body;

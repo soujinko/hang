@@ -1,14 +1,14 @@
 // import redis from "../config/redis.cluster.config.js";
-import { redisClient } from "../index.js";
+import redis from '../config/redis.cluster.config.js'
 
 const checkMypageRedis = (req, res, next) => {
   const { userPk } = res.locals.user;
   const { pagePk } = req.params;
   // console.log("마이페이지 레디스");
-  redisClient.hget(`mypage-${pagePk}`, "userInfo", function (error, userInfo) {
+  redis.hget(`mypage-${pagePk}`, "userInfo", function (error, userInfo) {
     if (error) next();
     if (userInfo) {
-      redisClient.hget(
+      redis.hget(
         `mypage-${pagePk}`,
         "tripInfo",
         function (error, tripInfo) {
@@ -22,7 +22,7 @@ const checkMypageRedis = (req, res, next) => {
 
               res.send({ userInfo, tripInfo });
             } else {
-              redisClient.hget(
+              redis.hget(
                 `mypage-${userPk}`,
                 "likes",
                 function (error, likes) {
@@ -48,7 +48,7 @@ const checkMypageRedis = (req, res, next) => {
 const checkLikeRedis = (req, res, next) => {
   const { userPk } = res.locals.user;
 
-  redisClient.get(`like=${userPk}`, (error, likeusers) => {
+  redis.get(`like=${userPk}`, (error, likeusers) => {
     if (error) next();
     if (likeusers !== null) {
       // console.log("redisdata-like", likeusers);

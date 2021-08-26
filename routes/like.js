@@ -1,10 +1,9 @@
 import express from "express";
-import dotenv from "dotenv";
-import { redisClient } from "../index.js";
+import redis from '../config/redis.cluster.config.js'
 import { connection } from "../models/db.js";
 import { checkLikeRedis } from "../functions/req_look_aside.js";
 
-dotenv.config();
+
 
 const router = express.Router();
 
@@ -25,7 +24,7 @@ router.get("/", checkLikeRedis, async (req, res) => {
     )[0];
     console.log("likeusers", JSON.stringify(likeusers));
     // 첫 요청이면 redis 캐시 등록
-    redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
+    redis.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
     res.send(likeusers);
   } catch (err) {
     console.error(err);
@@ -101,8 +100,8 @@ router.post("/", async (req, res, next) => {
     )[0];
     const mylikes = findlike.map((e) => e.userPk);
     // console.log("findlike", findlike);
-    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
-    await redisClient.hmset(`mypage-${updatePk}`, {
+    redis.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
+    await redis.hmset(`mypage-${updatePk}`, {
       likes: JSON.stringify(mylikes),
     });
     // console.log("조하요 다시 저장");

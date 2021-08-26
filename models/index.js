@@ -15,7 +15,7 @@ async function createDb() {
   await connection.query(requests);
   await connection.query(auth);
   await connection.query(
-    "create view userView as select userPk, nickname, userId, region, city, age, gender,guide, profileImg,intro from hang.users"
+    "create view userView as select userPk, nickname, userId, region, city, age, gender,guide, profileImg,intro, tags from hang.users"
   );
   console.log("tables created");
   connection.release();

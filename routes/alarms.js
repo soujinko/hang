@@ -52,7 +52,7 @@ router.get("/detail", async (req, res, next) => {
     const result = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select b.tripId, a.reqPk, a.checked FROM requests a left join trips b on a.tripId = b.tripid WHERE a.recPk=? and a.checked not in (2)`,
+          `select b.tripId, a.reqPk, a.checked FROM requests a left join trips b on a.tripId = b.tripid WHERE a.recPk=? and a.checked not in (2) ORDER BY a.requestId DESC`,
           userPk
         )
       )

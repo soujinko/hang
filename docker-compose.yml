@@ -2,7 +2,7 @@ version: '3'
 services:
     proxy:
         restart: unless-stopped
-        image: e50fd683f692
+        image: 1fe5200ca6f8
         ports:
             - 80:80/tcp
             - 443:443/tcp

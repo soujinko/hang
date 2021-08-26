@@ -12,6 +12,7 @@ const router = express.Router();
 router.get("/", checkLikeRedis, async (req, res) => {
   try {
     connection.beginTransaction();
+    // const { userPk } = req.params;
     const { userPk } = res.locals.user;
 
     const likeusers = JSON.parse(
@@ -22,6 +23,7 @@ router.get("/", checkLikeRedis, async (req, res) => {
         )
       )
     )[0];
+    console.log("likeusers", JSON.stringify(likeusers));
     // 첫 요청이면 redis 캐시 등록
     redisClient.set(`like=${userPk}`, JSON.stringify(likeusers), "EX", 86400);
     res.send(likeusers);
@@ -40,9 +42,11 @@ router.post("/", async (req, res, next) => {
   let updatePk;
   try {
     connection.beginTransaction();
+    // const { userPk } = req.params;
     const { userPk } = res.locals.user;
     updatePk = userPk;
-    const { targetPk } = req.body;
+    const { targetPk, block } = req.body;
+    console.log("block", block);
     let result;
     // 좋아요 저장하기
     const ifExist = JSON.parse(
@@ -54,7 +58,8 @@ router.post("/", async (req, res, next) => {
       )
     )[0];
     console.log("ifExist", ifExist);
-    if (ifExist.length > 0) {
+    if ((block && ifExist.length > 0) || ifExist.length > 0) {
+      // console.log("지워라");
       result = await connection.query(
         `DELETE FROM likes WHERE userPk=? AND targetPk=?`,
         [userPk, targetPk]
@@ -65,6 +70,9 @@ router.post("/", async (req, res, next) => {
         await connection.commit();
         res.status(200).send();
       }
+    } else if (block && ifExist.length === 0) {
+      console.log("그냥 ");
+      res.status(200).send();
     } else {
       result = await connection.query(
         `INSERT INTO likes(targetPk, userPk)VALUES(?, ?)`,
@@ -91,14 +99,13 @@ router.post("/", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("findlike", findlike);
-    // 레디스 마이페이지 해시 좋아요 리스트 업데이트
-    const updatelike = findlike.map((e) => e.userPk);
-    await redisClient.hmset(`mypage-${userPk}`, {
-      likes: JSON.stringify(updatelike),
+    const mylikes = findlike.map((e) => e.userPk);
+    // console.log("findlike", findlike);
+    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 86400);
+    await redisClient.hmset(`mypage-${updatePk}`, {
+      likes: JSON.stringify(mylikes),
     });
-    // 좋아요 추가 시 다시 좋아요 데이터 세팅 / 유지시간 1시간
-    redisClient.set(`like=${updatePk}`, JSON.stringify(findlike), "EX", 3600);
+    // console.log("조하요 다시 저장");
     connection.release();
   }
 });

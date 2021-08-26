@@ -8,9 +8,23 @@
  */
 import { connection } from "../db.js";
 
-const DBCleanerProc = `DELIMITER $$ CREATE PROCEDURE IF NOT EXISTS DBCleaner() BEGIN DELETE FROM trips WHERE TIMESTAMPDIFF(DAY, endDate, CURRENT_TIMESTAMP) > 0 END $$ DELIMITER $$;`;
+// 프로시저 수정 이것으로 실행
+// DROP procedure IF EXISTS `DBCleaner`;
+// DELIMITER $$
+// USE `hang`$$
+// CREATE PROCEDURE `DBCleaner` ()
+// BEGIN
+// 	DELETE FROM trips
+//     WHERE endDate < DATE_ADD(NOW(), INTERVAL - 24 HOUR);
+// END;$$
+// DELIMITER ;
 
-const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleaner ON SCHEDULE EVERY 24 hour ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
+const DBCleanerProc = `DELIMITER $$ CREATE PROCEDURE IF NOT EXISTS DBCleaner2() BEGIN DELETE FROM trips WHERE endDate < DATE_ADD(NOW(), INTERVAL - 24 HOUR); END $$ DELIMITER;`;
+
+// 지금부터 24시간마다 실행
+const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 24 hour STARTS NOW() ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
+// 1일에 1번 지정 시간 실행
+const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 1 DAY STARTS '2021-08-27 04:00:00' ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
 
 async function keepAlive() {
   try {

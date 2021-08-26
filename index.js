@@ -35,6 +35,8 @@ const server = http.createServer(app);
 
 const corsOption = {
   origin: [
+    "https://3.34.95.155:443",
+    "http://3.34.95.155:443",
     "https://54.180.143.198:443",
     "https://localhost:3000",
     "https://seunggyulee.shop",

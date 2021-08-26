@@ -2,13 +2,13 @@ import { Server } from "socket.io";
 import { connection } from "./models/db.js";
 import { server } from "./index.js";
 import redisAdapter from "@socket.io/redis-adapter";
-import redis from './config/redis.cluster.config.js'
+import redis from "./config/redis.cluster.config.js";
 
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-const pubClient = redis
+const pubClient = redis;
 const subClient = pubClient.duplicate();
 const multi = pubClient.multi();
 
@@ -23,6 +23,8 @@ io.on("connection", (socket) => {
   socket.on("login", async (user) => {
     const userPk = user.uid;
     let id = socket.id;
+    console.log("소켓테스트1", userPk, id);
+    console.log("현재 접속중", currentOn);
 
     // zscan 으로 전체 찾는 것 대신 가장 큰거 하나 찾아서 검증하는 zrevrange로 바꿈
     // zmemebers가 아무도 없더라도 room, unchecked가 undefined이므로 0과의 비교가 false가 되어 검증 가능
@@ -57,8 +59,7 @@ io.on("connection", (socket) => {
 
     socket.username = nickname;
     const roomName =
-      joiningUserPk < targetUserPk && 
-      `${joiningUserPk}:${targetUserPk}` ||
+      (joiningUserPk < targetUserPk && `${joiningUserPk}:${targetUserPk}`) ||
       `${targetUserPk}:${joiningUserPk}`;
 
     multi
@@ -140,12 +141,10 @@ io.on("connection", (socket) => {
       "SELECT profileImg, nickname FROM users WHERE userPk=?",
       [targetPk]
     );
-    await io.sockets
-      .to(socket.id)
-      .emit("newRoom", {
-        profileImg: nickAndProf[0][0].profileImg,
-        nickname: nickAndProf[0][0].nickname,
-      });
+    await io.sockets.to(socket.id).emit("newRoom", {
+      profileImg: nickAndProf[0][0].profileImg,
+      nickname: nickAndProf[0][0].nickname,
+    });
   });
 
   socket.on("leave", (data) => {
@@ -172,10 +171,7 @@ io.on("connection", (socket) => {
     multi
       .zscore("delCounts", roomName, (err, delCount) => {
         if (+delCount < 1) {
-          multi
-          .del(roomName)
-          .zrem("delCounts", roomName)
-          .exec()
+          multi.del(roomName).zrem("delCounts", roomName).exec();
         } else redis.zadd("delCounts", "LT", 0, roomName);
       })
       .zrem(userPk + "", roomName)

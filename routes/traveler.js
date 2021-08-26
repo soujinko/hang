@@ -17,7 +17,7 @@ router.post("/", async (req, res, next) => {
     const getMyProfile = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select guide from userView where userPk=${userPk}`
+          `select guide, region from userView where userPk=${userPk}`
         )
       )
     )[0][0];
@@ -30,7 +30,7 @@ router.post("/", async (req, res, next) => {
     const checkTripDate = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `select left(startDate, 10), left(endDate, 10), userPk, partner from trips where tripId=${tripId}`
+          `select left(startDate, 10), left(endDate, 10), userPk, partner, region from trips where tripId=${tripId}`
         )
       )
     )[0].map((e) => [
@@ -38,8 +38,13 @@ router.post("/", async (req, res, next) => {
       e["left(endDate, 10)"],
       e.userPk,
       e.partner,
+      e.region,
     ]);
     // console.log("checkTripDate1", checkTripDate);
+    if (checkTripDate.length === 0)
+      throw new Error("신청이 불가한 여행입니다.");
+    if (checkTripDate[0][4] !== getMyProfile.region)
+      throw new Error("신청이 불가한 지역입니다.");
     let startMyDate = Date.parse(checkTripDate[0][0]);
     let endMyDate = Date.parse(checkTripDate[0][1]);
     let pagePk = checkTripDate[0][2];

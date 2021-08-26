@@ -4,12 +4,12 @@ import checkDate from "../functions/checkDatefunc.js";
 
 const router = express.Router();
 
-router.get("/:userPk", async (req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
     let tripInfo = [];
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk } = req.params;
+    const { userPk } = res.locals.user;
+
     // 해당 페이지 유저의 프로필 정보 가져오기
     const findMyTrip = JSON.parse(
       JSON.stringify(
@@ -31,15 +31,14 @@ router.get("/:userPk", async (req, res, next) => {
     err.status = 400;
     next(err);
   } finally {
-    conn.release();
+    connection.release();
   }
 });
 
-router.post("/:userPk", async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    // const { userPk } = res.locals.user;
-    const { userPk } = req.params;
+    const { userPk } = res.locals.user;
     const { pagePk, tripId, startDate, endDate } = req.body;
 
     let startMyDate = Date.parse(startDate);
@@ -50,24 +49,31 @@ router.post("/:userPk", async (req, res, next) => {
     if (startMyDate < Date.parse(today)) {
       throw new Error("날짜 오류");
     }
+    const pageUserProfile = JSON.parse(
+      JSON.stringify(
+        await connection.query(`SELECT region FROM userView WHERE userPk=?`, [
+          pagePk,
+        ])
+      )
+    )[0];
     const checkTrip = JSON.parse(
       JSON.stringify(
-        await connection.query(
-          `SELECT * FROM trips WHERE tripId=${tripId} AND startDate='${startDate}' AND endDate='${endDate}'`
-        )
+        await connection.query(`SELECT * FROM trips WHERE tripId=?`, [tripId])
       )
     )[0];
 
-    // 해당여행 정보 없으면 에러
-    if (checkTrip.length === 0) {
-      throw new Error("여행 정보 없음");
-    }
+    // // 해당여행 정보 없으면 에러
+    // if (checkTrip.length === 0) throw new Error("여행 정보 없음");
+
+    if (checkTrip[0].region !== pageUserProfile[0].region)
+      throw new Error("신청이 불가한 지역입니다.");
 
     // 이미 요청한 약속이면 에러
     const requestExist = JSON.parse(
       JSON.stringify(
         await connection.query(
-          `SELECT * FROM requests WHERE tripId=${tripId} AND reqPk=${userPk} AND recPk=${pagePk}`
+          `SELECT * FROM requests WHERE tripId=? AND reqPk=? AND recPk=?`,
+          [tripId, userPk, pagePk]
         )
       )
     )[0];
@@ -75,12 +81,13 @@ router.post("/:userPk", async (req, res, next) => {
       throw new Error("이미 가이드를 요청했어요");
     }
     // 나의 확정 약속과 겹치면 false 안겹치면 true
-    const checkDates = await checkDate(userPk, startMyDate, endMyDate);
+    const checkDates = await checkDate(pagePk, startMyDate, endMyDate);
 
     const insertRequest = async () => {
       if (checkDates) {
         const result = await connection.query(
-          `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
+          `INSERT INTO requests (tripId, reqPk, recPk) VALUES (?, ?, ?)`,
+          [tripId, userPk, pagePk]
         );
         if (result[0].affectedRows === 0) throw new Error();
 

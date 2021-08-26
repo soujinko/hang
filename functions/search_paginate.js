@@ -1,4 +1,8 @@
 import { connection } from "../models/db.js";
+import Redis from "ioredis"
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 /**
  * For faster query, we applied:
@@ -34,58 +38,96 @@ import { connection } from "../models/db.js";
  * 21/08/15 We added ngram parser to the full text index to search in 'word boundaries' so called
  */
 
+const redis = new Redis({password:process.env.REDIS_PASSWORD})
+
 const searchAndPaginate = async (req, userPk, next) => {
   const { keyword, region, city, traveler, guide, pageNum } = req.body;
-  try {
-    await connection.beginTransaction();
+  let sequel = `SELECT a.userPk, nickname, age, gender, region, city, profileImg, 
+                CASE WHEN a.userPk IN 
+                (SELECT targetPk FROM likes WHERE userPk = ?) 
+                THEN 1 ELSE 0 END 'like' 
+                FROM (SELECT userPk FROM users WHERE userPk NOT IN (?`;
+  let inputs = [userPk, userPk]
+
+  const blockedPk = await redis.smembers(`block:${userPk}`)
+  for (let i=0; i<blockedPk.length; i++) {
+    sequel += ',?'
+    inputs.push(blockedPk[i])
+  }
+  sequel += ')'
+
+  // 공통사항인 keyword부터
+  if (keyword) {
+    sequel += ` AND MATCH(nickname) AGAINST(? IN BOOLEAN MODE)`;
+    inputs.push(keyword+'*')
+  }
+
+  if ((!traveler && !guide) && region ) {
+
+    sequel += ` AND (userPk IN (SELECT userPk FROM trips`
+    let options = [region, city]
+    let sequelAddOns = [' region=?', ' city=?']
     
-    let sequel = `SELECT a.userPk, nickname, age, gender, region, city, profileImg, 
-                 CASE WHEN a.userPk IN 
-                 (SELECT targetPk FROM likes WHERE userPk = ?) 
-                 THEN 1 ELSE 0 END 'like' 
-                 FROM (SELECT userPk FROM users WHERE userPk != ?`;
-    let inputs = [userPk, userPk]
-
-    if (keyword || region || city || guide || traveler) {
-      // 공통사항인 keyword부터
-      if (keyword) {
-        sequel += ` AND MATCH(nickname) AGAINST(? IN BOOLEAN MODE)`;
-        inputs.push(keyword+'*')
+    for (let [i, v] of Object.entries(options)) {
+      if (v) {
+        sequel.slice(-5) === 'trips' ? sequel += ' WHERE' + sequelAddOns[i] : sequel += ' AND' + sequelAddOns[i]
+        inputs.push(options[i])
       }
-      // traveler가 true라면 city, region을 trips에서 검색해야 한다
-      if (traveler) {
-        sequel += ` AND userPk IN (SELECT userPk FROM trips`
-        
-        const options = [region, city]
-        const sequelAddOns = [' region=?', ' city=?']
-        
-        for (let [i, v] of Object.entries(options)) {
-          if (v) {
-            sequel.slice(-5) === 'trips' ? sequel += ' WHERE' + sequelAddOns[i] : sequel += ' AND' + sequelAddOns[i]
-            inputs.push(options[i])
-          }
-        }
-        sequel += `)`
-      } else {
-        const options = [region, city, guide];
-        const sequelAddOns = [
-          ` AND region=?`,
-          ` AND city=?`,
-          ` AND guide=?`,
-        ];
+    }
+    sequel += `) OR`
 
-        for (let [i, v] of Object.entries(options)) {
-          if (v) {
-            sequel += sequelAddOns[i];
-            inputs.push(options[i])
-          }
+    options = [region, city];
+    sequelAddOns = [
+      ` region=?`,
+      ` city=?`,
+    ];
+
+    for (let [i, v] of Object.entries(options)) {
+      if (v) {
+        sequel.slice(-2) === 'OR' ? sequel += sequelAddOns[i] : sequel += 'AND' + sequelAddOns[i]
+        inputs.push(options[i])
+      }
+    }
+    sequel += ')'
+
+  } else if (keyword || region || city || guide || traveler) {
+    // traveler가 true라면 city, region을 trips에서 검색해야 한다
+    if (traveler) {
+      sequel += ` AND userPk IN (SELECT userPk FROM trips`
+      
+      const options = [region, city]
+      const sequelAddOns = [' region=?', ' city=?']
+      
+      for (let [i, v] of Object.entries(options)) {
+        if (v) {
+          sequel.slice(-5) === 'trips' ? sequel += ' WHERE' + sequelAddOns[i] : sequel += ' AND' + sequelAddOns[i]
+          inputs.push(options[i])
+        }
+      }
+      sequel += `)`
+    } else {
+      const options = [region, city, guide];
+      const sequelAddOns = [
+        ` AND region=?`,
+        ` AND city=?`,
+        ` AND guide=?`,
+      ];
+
+      for (let [i, v] of Object.entries(options)) {
+        if (v) {
+          sequel += sequelAddOns[i];
+          inputs.push(options[i])
         }
       }
     }
+  }
 
-    sequel += ` LIMIT ?, 10) a JOIN users b ON a.userPk = b.userPk`;
-    const limitParam = pageNum && pageNum > 0 && 10 * (pageNum - 1) || 0
-    inputs.push(limitParam)
+  sequel += ` LIMIT ?, 10) a JOIN users b ON a.userPk = b.userPk ORDER BY RAND()`;
+  const limitParam = pageNum && pageNum > 0 && 10 * (pageNum - 1) || 0
+  inputs.push(limitParam)
+  
+  try {
+    await connection.beginTransaction();
     const data = await connection.query(sequel, inputs);
     await connection.release(); // return이 있어서 finally가 실행 안될까봐 넣어 둠
     return JSON.parse(JSON.stringify(data[0]));

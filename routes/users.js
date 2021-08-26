@@ -1,18 +1,19 @@
 import express from "express";
 import crypto from "crypto";
-import { connection } from "../models/db.js";
+import { getConnection, connection } from "../models/db.js";
 import NC_SMS from "../services/NC_SMS.js";
 import dotenv from "dotenv";
 import passport from "passport";
 import jwt from "jsonwebtoken";
 import verification from "../middleware/verification.js";
 import asyncHandle from "../util/async_handler.js";
-import redis from '../config/redis.cluster.config.js'
-import zscanner from "../functions/zscanner.js";
+import Redis from 'ioredis'
+import zscanner from '../functions/zscanner.js'
 
 dotenv.config();
 
 const router = express.Router();
+const redis = new Redis({password:process.env.REDIS_PASSWORD})
 const pipeline = redis.pipeline()
 // pk, nick, profileImg전달
 router.post("/sms_auth", (req, res, next) => {
@@ -28,11 +29,16 @@ router.post("/sms_auth", (req, res, next) => {
           (err, data) => {
             if (err) throw err;
             if (data.length > 0) return res.sendStatus(409);
+
             const authNumber = Math.floor(Math.random() * 90000) + 10000;
             NC_SMS(req, next, authNumber);
             // redis에 저장
-            redis.zadd('auth', authNumber, phoneNumber)
-            res.sendStatus(200);
+            // await redis.zadd('auth', authNumber, phoneNumber)
+            pipeline
+              .set(phoneNumber, authNumber)
+              .expire(phoneNumber, 60)
+              .exec()
+              .then(ok=>res.sendStatus(200))
           }
         );
       // 비밀번호 찾기라면
@@ -40,8 +46,11 @@ router.post("/sms_auth", (req, res, next) => {
         const authNumber = Math.floor(Math.random() * 90000) + 10000;
         NC_SMS(req, next, authNumber);
         // redis에 저장
-        redis.zadd('auth', authNumber, phoneNumber)
-        res.sendStatus(200);
+        pipeline
+          .set(phoneNumber, authNumber)
+          .expire(phoneNumber, 60)
+          .exec()
+          .then(ok=>res.sendStatus(200))
       }
     } catch (err) {
       conn.rollback();
@@ -52,16 +61,12 @@ router.post("/sms_auth", (req, res, next) => {
   });
 });
 
-router.post(
-  "/p_auth",
-  asyncHandle(async (req, res, next) => {
-    const { pNum: phoneNumber, aNum: authNumber } = req.body;
-    // redis 데이터 불러와서 비교
-    const storedAuthNumber = await redis.zscore('auth', phoneNumber)
-    authNumber === storedAuthNumber ? res.sendStatus(200) : res.sendStatus(406)
-    res.sendStatus(200);
-  })
-);
+router.post("/p_auth", asyncHandle(async(req, res, next) => {
+  const { pNum: phoneNumber, aNum: authNumber } = req.body;
+  // redis 데이터 불러와서 비교
+  const storedAuthNumber = await redis.get(phoneNumber)
+  authNumber === storedAuthNumber ? res.sendStatus(200) : res.sendStatus(406)
+}));
 
 router.post("/duplicate", (req, res, next) => {
   const { userId, nickname } = req.body;
@@ -77,7 +82,7 @@ router.post("/duplicate", (req, res, next) => {
           throw err;
         } else if (data.length > 0) {
           // 여기 throw로 하면 안됩니다. 그냥 status로
-          return res.sendStatus(409);
+          return res.sendStatus(409)
         } else {
           res.sendStatus(200);
         }
@@ -105,7 +110,13 @@ router.post("/", (req, res, next) => {
 
   const salt = crypto.randomBytes(64).toString("base64");
   const hashedPassword = crypto
-    .pbkdf2Sync(password, salt, Number(process.env.ITERATION_NUM), 64, "SHA512")
+    .pbkdf2Sync(
+      password,
+      salt,
+      Number(process.env.ITERATION_NUM),
+      64,
+      "SHA512"
+    )
     .toString("base64");
   getConnection((conn) => {
     try {
@@ -156,7 +167,7 @@ router.post("/signin", (req, res, next) => {
         const accessToken = jwt.sign(
           {
             userPk: user.userPk,
-            nickname: user.nickname,
+            nickname: user.nickname
           },
           process.env.PRIVATE_KEY,
           { expiresIn: '3h', algorithm: "HS512" }
@@ -169,9 +180,10 @@ router.post("/signin", (req, res, next) => {
         getConnection((conn) => {
           try {
             conn.beginTransaction();
-            conn.query(
-              `UPDATE users SET refreshToken=${refreshToken} WHERE userPk=${user.userPk}`
-            );
+            conn.query(`UPDATE users SET refreshToken=? WHERE userPk=?`, [
+              refreshToken,
+              user.userPk,
+            ]);
             conn.commit();
           } catch (err) {
             conn.rollback();
@@ -242,7 +254,7 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
         obj = {}
       }
     }
-    console.log(result)
+    
     res.status(200).json({result})
   } catch(err) {
     await connection.rollback()
@@ -253,61 +265,66 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
 }))
 
 // 차단한 사람들의 정보 가져오기
-router.get(
-  "/block",
-  verification,
-  asyncHandle(async (req, res, next) => {
-    const { userPk } = res.locals.user;
-    const blocked = await redis.smembers(`block:${userPk}`);
-
-    if (!blocked.length) return res.sendStatus(204);
-
-    let inputs = [+blocked[0]];
-    let sequel =
-      "SELECT profileImg, nickname, userPk FROM users WHERE userPk IN (?";
-
-    blocked.slice(1).forEach((blockedID) => {
-      inputs.push(+blockedID);
-      sequel += ",?";
-    });
-    sequel += ");";
-
-    try {
-      await connection.beginTransaction();
-      const blockedUsers = (await connection.query(sequel, inputs))[0];
-      res.status(200).json({ blockedUsers });
-    } catch (err) {
-      connection.rollback();
-      next(err);
-    } finally {
-      connection.release();
-    }
+router.get('/block', verification, asyncHandle(async(req, res, next) => {
+  const { userPk } = res.locals.user;
+  const blockedPk = await redis.smembers(`block:${userPk}`)
+  
+  if (!blockedPk.length) return res.sendStatus(204)
+  
+  let inputs = [+blockedPk[0]]
+  let sequel = 'SELECT profileImg, nickname, userPk FROM users WHERE userPk IN (?'
+  
+  blockedPk.slice(1).forEach(blockedID => {
+    inputs.push(+blockedID)
+    sequel += ',?'
   })
-);
+  sequel += ');'
+
+  try {
+    await connection.beginTransaction()
+    const blockedUsers = (await connection.query(sequel, inputs))[0]
+    res.status(200).json({blockedPk, blockedUsers})
+  } catch (err) {
+    connection.rollback()
+    next(err)
+  } finally {
+    connection.release()
+  }
+}))
 
 // 차단
-router.post(
-  "/block",
-  verification,
-  asyncHandle(async (req, res) => {
-    const { userPk } = res.locals.user;
-    const { targetPk } = req.body;
-    await redis.sadd(`block:${userPk}`, targetPk);
-    res.sendStatus(201);
-  })
-);
+router.post('/block', verification, asyncHandle(async(req, res, next) => {
+  // trips: userPk가 나, partner가 차단상대방 OR userPk가 상대방, partner가 나
+  // requests: recPk가 나, reqPk가 차단상대방 OR reqPk가 나, recPk가 상대방
+  // 즐겨찾기 취소 api 발생
+  // 검색과 메인페이지에선 where not조건 추가
+
+  const { userPk } = res.locals.user;
+  const { targetPk } = req.body;
+  const pksAndReversed = [userPk, targetPk, targetPk, userPk]
+  try {
+    await redis.sadd(`block:${userPk}`, targetPk)
+    await connection.beginTransaction()
+    await connection.query('UPDATE trips SET partner=NULL WHERE (userPk=? AND partner=?) OR (userPk=? AND partner=?)', pksAndReversed)
+    await connection.query('DELETE FROM requests WHERE (recPk=? AND reqPk=?) OR (recPk=? AND reqPk=?)', pksAndReversed)
+    await connection.commit()
+    res.sendStatus(201)
+  } catch(err) {
+    await connection.rollback()
+    next()
+  } finally {
+    await connection.release()
+  }
+  
+}))
 
 // 차단해제
-router.patch(
-  "/block",
-  verification,
-  asyncHandle(async (req, res) => {
-    const { userPk } = res.locals.user;
-    const { targetPk } = req.body;
-    await redis.srem(`block:${userPk}`, targetPk);
-    res.sendStatus(204);
-  })
-);
+router.patch('/block', verification, asyncHandle(async(req, res) => {
+  const { userPk } = res.locals.user;
+  const { targetPk } = req.body;
+  await redis.srem(`block:${userPk}`, targetPk)
+  res.sendStatus(204)
+}))
 
 // 회원 탈퇴 
 router.delete('/quit', verification, asyncHandle(async(req, res, next) => {
@@ -339,20 +356,15 @@ router.delete('/quit', verification, asyncHandle(async(req, res, next) => {
 router.post('/exists', async(req, res) => {
   const { userId, pNum } = req.body;
   try {
-    await connection.beginTransaction();
-    const isUserExists = (
-      await connection.query(
-        "SELECT userPk FROM users WHERE userId=? AND pNum=?",
-        [userId, pNum]
-      )
-    )[0];
-    isUserExists.length !== 1 ? res.sendStatus(406) : res.sendStatus(200);
-  } catch (err) {
-    next(err);
+    await connection.beginTransaction()
+    const isUserExists = (await connection.query('SELECT userPk FROM users WHERE userId=? AND pNum=?', [userId, pNum]))[0]
+    isUserExists.length !== 1 ? res.sendStatus(406) : res.sendStatus(200)
+  } catch(err) {
+    next(err)
   } finally {
-    connection.release();
+    connection.release()
   }
-});
+})
 
 // 입력한 id와 전화번호가 일치하는지 검사하는 과정 필요
 // 비밀번호 수정(p_auth에서 폰 인증문자 인증하고 -> 수정할 비밀번호 입력)
@@ -360,30 +372,29 @@ router.post('/password', async (req, res, next) => {
   const { newPassword, userId } = req.body;
   const salt = crypto.randomBytes(64).toString("base64");
   const hashedPassword = crypto
-    .pbkdf2Sync(
-      newPassword,
-      salt,
-      Number(process.env.ITERATION_NUM),
-      64,
-      "SHA512"
-    )
-    .toString("base64");
-  const newPasswordAndSalt = { password: hashedPassword, salt: salt };
+        .pbkdf2Sync(
+          newPassword,
+          salt,
+          Number(process.env.ITERATION_NUM),
+          64,
+          "SHA512"
+        )
+        .toString("base64");
+  const newPasswordAndSalt = { password: hashedPassword, salt: salt }
   try {
-    await connection.beginTransaction();
-    await connection.query("UPDATE users SET ? WHERE userId = ?", [
-      newPasswordAndSalt,
-      userId,
-    ]);
-    await connection.commit();
-    res.sendStatus(204);
-  } catch (err) {
-    await connection.rollback();
-    next(err);
+    await connection.beginTransaction()
+    await connection.query('UPDATE users SET ? WHERE userId = ?', [newPasswordAndSalt, userId])
+    await connection.commit()
+    res.sendStatus(204)
+    
+  } catch(err) {
+    await connection.rollback()
+    next(err)
   } finally {
-    await connection.release();
+    await connection.release()
   }
-});
+})
+
 
 router.get("/a", verification, (req, res) => {
   res.status(200).json({ status: true });

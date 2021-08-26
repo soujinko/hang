@@ -2,30 +2,26 @@ import { Server } from "socket.io";
 import { connection } from "./models/db.js";
 import { server } from "./index.js";
 import redisAdapter from "@socket.io/redis-adapter";
-import Redis from 'ioredis'
-import dotenv from 'dotenv'
+import Redis from "ioredis";
+import dotenv from "dotenv";
 
-dotenv.config()
+dotenv.config();
 
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
-const redis = new Redis({password:process.env.REDIS_PASSWORD})
-const pubClient = new Redis({password:process.env.REDIS_PASSWORD})
+
+const pubClient = new Redis({ password: process.env.REDIS_PASSWORD });
 const subClient = pubClient.duplicate();
-const multi = redis.multi();
+const redis = pubClient;
+const pipeline = pubClient.pipeline();
 
 io.adapter(redisAdapter(pubClient, subClient));
 
 // 로그인 할 때 유저 정보 받아서 socket id와 함께 저장하기
 let currentOn = {};
 
-const includes = (userPk, socket) => {
-  console.log('currentOn을 상대방 Pk로 조회:', currentOn[userPk+''])
-  const isSocketIdExists = Object.values(currentOn).includes(socket.id)
-  const isUserPkExists = currentOn.hasOwnProperty(userPk+'')
-  console.log('내 소켓ID가 존재하나요? ', isSocketIdExists, '상대방 유저PK가 존재하나요?', isUserPkExists)
-}
+const next = (err) => io.use((sock, next) => next(err));
 
 io.on("connection", (socket) => {
   socket.on("login", async (user) => {
@@ -53,7 +49,6 @@ io.on("connection", (socket) => {
     //  data.uid 는 클라이언트에서 보내준 타겟의 userPk
     const userPk = data.uid;
     let stringPk = String(userPk);
-    includes(userPk,socket)
     if (currentOn.hasOwnProperty(stringPk)) {
       await io.sockets.to(currentOn[userPk]).emit("requested", true);
     }
@@ -66,11 +61,10 @@ io.on("connection", (socket) => {
 
     socket.username = nickname;
     const roomName =
-      joiningUserPk < targetUserPk && 
-      `${joiningUserPk}:${targetUserPk}` ||
+      (joiningUserPk < targetUserPk && `${joiningUserPk}:${targetUserPk}`) ||
       `${targetUserPk}:${joiningUserPk}`;
 
-    multi
+    pipeline
       .zadd(joiningUserPk + "", 0, roomName)
       .zadd("delCounts", "NX", 0, roomName)
       .lrange(roomName, 0, -1, async (err, chatLogs) => {
@@ -92,7 +86,7 @@ io.on("connection", (socket) => {
           });
         } catch (err) {
           connection.rollback();
-          console.error(err);
+          next(err);
         } finally {
           connection.release();
         }
@@ -106,9 +100,9 @@ io.on("connection", (socket) => {
   socket.on("sendMessage", async (data) => {
     const { roomName, targetPk, message, userPk } = data;
     const curTime = Date.now();
-    includes(userPk,socket)
-    const currentRoom = await io.of("/").adapter.sockets(new Set([roomName]));
     // 방에 혼자 있다면
+    const currentRoom = await io.of("/").adapter.sockets(new Set([roomName]));
+
     if (currentRoom.size < 2) {
       // 상대방에게 차단당하지 않았다면
       if (!(await redis.sismember(`block:${targetPk}`, userPk))) {
@@ -131,10 +125,9 @@ io.on("connection", (socket) => {
       curTime: curTime,
     });
 
-    multi
-      .zadd("delCounts", "GT", 1, roomName)
+    redis.zadd("delCounts", "GT", 1, roomName);
+    redis
       .rpush(roomName, log)
-      .exec()
       .then(
         async (res) =>
           await io
@@ -150,18 +143,16 @@ io.on("connection", (socket) => {
       "SELECT profileImg, nickname FROM users WHERE userPk=?",
       [targetPk]
     );
-    await io.sockets
-      .to(socket.id)
-      .emit("newRoom", {
-        profileImg: nickAndProf[0][0].profileImg,
-        nickname: nickAndProf[0][0].nickname,
-      });
+    await io.sockets.to(socket.id).emit("newRoom", {
+      profileImg: nickAndProf[0][0].profileImg,
+      nickname: nickAndProf[0][0].nickname,
+    });
   });
 
   socket.on("leave", (data) => {
     const { userPk, roomName } = data;
 
-    multi
+    pipeline
       // 자신이 방금 나온 방의 읽지 않은 갯수는 0으로
       .zadd(userPk + "", "XX", 0, roomName)
       // 메세지 100개로 제한.
@@ -176,16 +167,14 @@ io.on("connection", (socket) => {
       );
   });
 
-  socket.on("quit", (data) => {
+  socket.on("ByeBye", (data) => {
     const { userPk, roomName } = data;
     // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터는 delCount 0일 경우 삭제
-    multi
+    pipeline
       .zscore("delCounts", roomName, (err, delCount) => {
         if (+delCount < 1) {
-          multi
-          .del(roomName)
-          .zrem("delCounts", roomName)
-          .exec()
+          redis.del(roomName);
+          redis.zrem("delCounts", roomName);
         } else redis.zadd("delCounts", "LT", 0, roomName);
       })
       .zrem(userPk + "", roomName)

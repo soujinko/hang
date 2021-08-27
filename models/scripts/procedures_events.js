@@ -19,12 +19,12 @@ import { connection } from "../db.js";
 // END;$$
 // DELIMITER ;
 
-const DBCleanerProc = `DELIMITER $$ CREATE PROCEDURE IF NOT EXISTS DBCleaner2() BEGIN DELETE FROM trips WHERE endDate < DATE_ADD(NOW(), INTERVAL - 24 HOUR); END $$ DELIMITER;`;
+// const DBCleanerProc = `DELIMITER $$ CREATE PROCEDURE IF NOT EXISTS DBCleaner2() BEGIN DELETE FROM trips WHERE endDate < DATE_ADD(NOW(), INTERVAL - 24 HOUR); END $$ DELIMITER;`;
 
-// 지금부터 24시간마다 실행
-const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 24 hour STARTS NOW() ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
-// 1일에 1번 지정 시간 실행
-const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 1 DAY STARTS '2021-08-27 04:00:00' ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
+// // 지금부터 24시간마다 실행
+// const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 24 hour STARTS NOW() ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
+// // 1일에 1번 지정 시간 실행
+// const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 1 DAY STARTS '2021-08-27 04:00:00' ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
 
 async function keepAlive() {
   try {

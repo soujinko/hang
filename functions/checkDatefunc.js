@@ -23,12 +23,24 @@ const checkDate = async (userPk, startMyDate, endMyDate) => {
     await userTripDates2.forEach((e) => {
       let startOld = Date.parse(e[0]);
       let endOld = Date.parse(e[1]);
+
       if (startMyDate > startOld && startMyDate < endOld) {
-        throw new Error("해당 날짜에 이미 약속이 있어요");
+        res
+          .status(400)
+          .send({ errorMessage: "해당 날짜에 이미 약속이 있어요" });
+        // throw new Error("해당 날짜에 이미 약속이 있어요");
       } else if (endMyDate > startOld && endMyDate < endOld) {
-        throw new Error("해당 날짜에 이미 약속이 있어요");
+        res
+          .status(400)
+          .send({ errorMessage: "해당 날짜에 이미 약속이 있어요" });
+
+        // throw new Error("해당 날짜에 이미 약속이 있어요");
       } else if (startMyDate <= startOld && endMyDate >= endOld) {
-        throw new Error("해당 날짜에 이미 약속이 있어요");
+        res
+          .status(400)
+          .send({ errorMessage: "해당 날짜에 이미 약속이 있어요" });
+
+        // throw new Error("해당 날짜에 이미 약속이 있어요");
       } else {
         count += 1;
         console.log("count", count);
@@ -37,10 +49,10 @@ const checkDate = async (userPk, startMyDate, endMyDate) => {
     //   겹치는 날짜 없으면 true 반환
     if (count === userTripDates.length) {
       console.log("returncount", count);
-      return;
+      return true;
     }
     // 등록 약속 없으면 true 반환
-  } else return;
+  } else return true;
 };
 
 export default checkDate;

@@ -1,7 +1,7 @@
 import express from "express";
 import { connection } from "../models/db.js";
 import { checkMypageRedis } from "../functions/req_look_aside.js";
-import redis from '../config/redis.cluster.config.js'
+import redis from "../config/redis.cluster.config.js";
 
 const router = express.Router();
 
@@ -204,7 +204,7 @@ router.get("/promise", async (req, res, next) => {
 router.post("/create_trip", async (req, res, next) => {
   try {
     connection.beginTransaction();
-    const { region, city, startDate, endDate, tripInfo } = req.body;
+    const { region, city, startDate, endDate, tripInfo, tags } = req.body;
     const { userPk } = res.locals.user;
 
     let startNewDate = Date.parse(startDate);
@@ -232,8 +232,8 @@ router.post("/create_trip", async (req, res, next) => {
     //  새 여행 저장하는 함수, 레디스 디비 업데이트
     const saveNewTrip = async (tripInfo) => {
       await connection.query(
-        `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo) VALUES (?,?,?,?,?,?)`,
-        [userPk, region, city, startDate, endDate, tripInfo]
+        `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, tags) VALUES (?,?,?,?,?,?,?)`,
+        [userPk, region, city, startDate, endDate, tripInfo, tags]
       );
       await connection.commit();
 
@@ -383,12 +383,12 @@ router.patch("/", async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
-    const { nickname, profileImg, region, city, intro } = req.body;
+    const { nickname, profileImg, region, city, intro, tags } = req.body;
 
     // 내 프로필 정보 업데이트하기
     const result = await connection.query(
-      `UPDATE users set nickname=?,profileImg=?,region=?,city=?,intro=? where userPk=?`,
-      [nickname, profileImg, region, city, intro, userPk]
+      `UPDATE users set nickname=?,profileImg=?,region=?,city=?,intro=?,tags=? where userPk=?`,
+      [nickname, profileImg, region, city, intro, tags, userPk]
     );
     if (result[0].affectedRows === 0) {
       throw new Error();

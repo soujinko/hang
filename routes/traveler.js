@@ -76,6 +76,7 @@ router.post("/", async (req, res, next) => {
     const checkDates = await checkDate(userPk, startMyDate, endMyDate);
 
     const insertRequest = async () => {
+      console.log("checkDates", checkDates);
       if (checkDates) {
         const result = await connection.query(
           `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`

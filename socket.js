@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import { connection } from "./models/db.js";
-import { server } from "./index.js";
+import server from "./index.js";
 import redisAdapter from "@socket.io/redis-adapter";
 import redis from "./config/redis.cluster.config.js";
 
@@ -160,6 +160,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("leave", (data) => {
+    console.log("리브리브!");
     const { userPk, roomName } = data;
 
     multi

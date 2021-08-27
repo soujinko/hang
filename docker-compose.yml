@@ -16,13 +16,7 @@ services:
           - .:/etc/nginx/
           - ./conf.d:/etc/nginx/conf.d:ro
           - /etc/letsencrypt:/etc/letsencrypt
-    server:
-        build:
-            context: .
-            dockerfile: /home/ubuntu/hang/Dockerfile
-        working_dir: /usr/src/app
-        volumes:
-          - /home/ubuntu/hang:/usr/src/app
+
 
 volumes:
     letsencrypt:

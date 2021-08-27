@@ -10,16 +10,17 @@ import errorHandlers from "./util/error_handlers.js";
 import passport from "passport";
 import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
-// import fs from "fs";
+import fs from "fs";
 import http from "http";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
 import logger from "./config/winston_config.js";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
 const app = express();
-// app.use(express.static("public"));
+app.use(express.static("public"));
 // const options = {
 //   // letsencrypt로 받은 인증서 경로를 입력
 //   ca: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/fullchain.pem"),
@@ -45,6 +46,12 @@ const corsOption = {
   optionSuccessStatus: 200,
 };
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+});
+
+app.use(limiter);
 app.use(cors(corsOption));
 app.use(morgan("dev"));
 app.use(morgan("combined", { stream: logger.stream }));
@@ -64,4 +71,4 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
-export { server };
+export default server;

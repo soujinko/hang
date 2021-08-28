@@ -20,6 +20,7 @@ import rateLimit from "express-rate-limit";
 dotenv.config();
 
 const app = express();
+
 app.use(express.static("public"));
 const options = {
   // letsencrypt로 받은 인증서 경로를 입력
@@ -33,18 +34,6 @@ const options = {
 const server = https.createServer(options, app);
 // const server = http.createServer(app);
 
-const corsOption = {
-  origin: [
-    "https://3.34.95.155:443",
-    "http://3.34.95.155:443",
-    "https://54.180.143.198:443",
-    "https://localhost:3000",
-    "https://seunggyulee.shop",
-    "https://hanging.kr",
-  ],
-  credentials: true,
-  optionSuccessStatus: 200,
-};
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -71,4 +60,9 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
+<<<<<<< HEAD
+=======
+const server = https.createServer(options, app);
+
+>>>>>>> 597e836ff8d533fe484e4b1dabf3d37e8ee3c35d
 export default server;

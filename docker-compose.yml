@@ -2,7 +2,7 @@ version: '3'
 services:
     proxy:
         restart: unless-stopped
-        image: 1fe5200ca6f8
+        image: 20ba4a44c409
         ports:
             - 80:80/tcp
             - 443:443/tcp
@@ -16,7 +16,13 @@ services:
           - .:/etc/nginx/
           - ./conf.d:/etc/nginx/conf.d:ro
           - /etc/letsencrypt:/etc/letsencrypt
-
+    # server:
+        # build:
+            # context: .
+            # dockerfile: /home/ubuntu/hang/Dockerfile
+        # working_dir: /usr/src/app
+        # volumes:
+          # - /home/ubuntu/hang:/usr/src/app
 
 volumes:
     letsencrypt:

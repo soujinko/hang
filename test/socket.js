@@ -10,11 +10,10 @@ dotenv.config();
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] },
 });
-
-const pubClient = new Redis({ password: process.env.REDIS_PASSWORD });
+const redis = new Redis({ password: process.env.REDIS_PASSWORD });
+const pubClient = redis;
 const subClient = pubClient.duplicate();
-const redis = pubClient;
-const pipeline = pubClient.pipeline();
+// const pipeline = redis.pipeline();
 
 io.adapter(redisAdapter(pubClient, subClient));
 
@@ -22,11 +21,25 @@ io.adapter(redisAdapter(pubClient, subClient));
 let currentOn = {};
 
 const next = (err) => io.use((sock, next) => next(err));
+const includes = (userPk, socket) => {
+  console.log("currentOn을 상대방 Pk로 조회:", currentOn[userPk + ""]);
+  const isSocketIdExists = Object.values(currentOn).includes(socket.id);
+  const isUserPkExists = currentOn.hasOwnProperty(userPk + "");
+  console.log(
+    "내 소켓ID가 존재하나요? ",
+    isSocketIdExists,
+    "상대방 유저PK가 존재하나요?",
+    isUserPkExists
+  );
+  console.log("현재 접속중-리퀘스트", currentOn);
+};
 
 io.on("connection", (socket) => {
   socket.on("login", async (user) => {
     const userPk = user.uid;
     let id = socket.id;
+    console.log("소켓테스트1", userPk, id);
+    console.log("현재 접속중", currentOn);
 
     // zscan 으로 전체 찾는 것 대신 가장 큰거 하나 찾아서 검증하는 zrevrange로 바꿈
     // zmemebers가 아무도 없더라도 room, unchecked가 undefined이므로 0과의 비교가 false가 되어 검증 가능
@@ -43,15 +56,18 @@ io.on("connection", (socket) => {
     } else if (userPk !== "null") {
       currentOn[userPk] = id;
     }
+    socket.offAny()
   });
 
   socket.on("request", async (data) => {
     //  data.uid 는 클라이언트에서 보내준 타겟의 userPk
     const userPk = data.uid;
     let stringPk = String(userPk);
+    includes(userPk, socket);
     if (currentOn.hasOwnProperty(stringPk)) {
       await io.sockets.to(currentOn[userPk]).emit("requested", true);
     }
+    socket.offAny()
   });
 
   socket.on("join", (data) => {
@@ -64,10 +80,10 @@ io.on("connection", (socket) => {
       (joiningUserPk < targetUserPk && `${joiningUserPk}:${targetUserPk}`) ||
       `${targetUserPk}:${joiningUserPk}`;
 
-    pipeline
-      .zadd(joiningUserPk + "", 0, roomName)
-      .zadd("delCounts", "NX", 0, roomName)
-      .lrange(roomName, 0, -1, async (err, chatLogs) => {
+    
+    redis.zadd(joiningUserPk + "", 0, roomName)
+    redis.zadd("delCounts", "NX", 0, roomName)
+    redis.lrange(roomName, 0, -1, async (err, chatLogs) => {
         if (err) console.error(err);
         try {
           await connection.beginTransaction();
@@ -91,18 +107,18 @@ io.on("connection", (socket) => {
           connection.release();
         }
       })
-      .exec()
       .then(
         async (res) => await io.of("/").adapter.remoteJoin(socket.id, roomName)
       );
+    socket.offAny()
   });
 
   socket.on("sendMessage", async (data) => {
     const { roomName, targetPk, message, userPk } = data;
     const curTime = Date.now();
-    // 방에 혼자 있다면
+    includes(userPk, socket);
     const currentRoom = await io.of("/").adapter.sockets(new Set([roomName]));
-
+    // 방에 혼자 있다면
     if (currentRoom.size < 2) {
       // 상대방에게 차단당하지 않았다면
       if (!(await redis.sismember(`block:${targetPk}`, userPk))) {
@@ -125,15 +141,16 @@ io.on("connection", (socket) => {
       curTime: curTime,
     });
 
-    redis.zadd("delCounts", "GT", 1, roomName);
-    redis
-      .rpush(roomName, log)
+    
+    redis.zadd("delCounts", "GT", 1, roomName)
+    redis.rpush(roomName, log)
       .then(
         async (res) =>
           await io
             .to(roomName)
             .emit("updateMessage", { userPk: userPk, message: message })
       );
+    socket.offAny()
   });
 
   // 상대방이 채팅방 목록을 보고 있으며 메시지를 송신한 사람과의 대화방은 없을 때 새로운 방을 생성
@@ -147,45 +164,42 @@ io.on("connection", (socket) => {
       profileImg: nickAndProf[0][0].profileImg,
       nickname: nickAndProf[0][0].nickname,
     });
+    socket.offAny()
   });
 
   socket.on("leave", (data) => {
     const { userPk, roomName } = data;
-
-    pipeline
       // 자신이 방금 나온 방의 읽지 않은 갯수는 0으로
-      .zadd(userPk + "", "XX", 0, roomName)
+    redis.zadd(userPk + "", "XX", 0, roomName)
       // 메세지 100개로 제한.
-      .ltrim(roomName, -100, -1)
+    redis.ltrim(roomName, -100, -1)
       // 마지막 채팅으로 부터 3일간 유지
-      .expireat(roomName, Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 3)
-      .exec((err, res) => {
-        if (err) console.error(err);
-      })
+    redis.expireat(roomName, Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 3)
       .then(
         async (res) => await io.of("/").adapter.remoteLeave(socket.id, roomName)
       );
+    socket.offAny()
   });
 
-  socket.on("ByeBye", (data) => {
+  socket.on("quit", (data) => {
     const { userPk, roomName } = data;
     // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터는 delCount 0일 경우 삭제
-    pipeline
-      .zscore("delCounts", roomName, (err, delCount) => {
+    redis.zscore("delCounts", roomName, (err, delCount) => {
         if (+delCount < 1) {
-          redis.del(roomName);
-          redis.zrem("delCounts", roomName);
+         redis.del(roomName)
+         redis.zrem("delCounts", roomName)
         } else redis.zadd("delCounts", "LT", 0, roomName);
       })
-      .zrem(userPk + "", roomName)
-      .exec()
+    redis.zrem(userPk + "", roomName)
       .then(
         async (res) => await io.of("/").adapter.remoteLeave(socket.id, roomName)
       );
+    socket.offAny()
   });
 
   //  로그아웃 혹은 앱 웹 끄면 소켓 삭제
   socket.on("logout", (data) => {
+    socket.offAny()
     socket.on("disconnect", () => {
       delete currentOn[data.uid];
     });

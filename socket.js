@@ -10,7 +10,7 @@ const io = new Server(server, {
 
 const pubClient = redis;
 const subClient = pubClient.duplicate();
-const multi = redis.multi();
+// const multi = redis.multi();
 
 io.adapter(redisAdapter(pubClient, subClient));
 
@@ -72,37 +72,37 @@ io.on("connection", (socket) => {
     const roomName =
       (joiningUserPk < targetUserPk && `${joiningUserPk}:${targetUserPk}`) ||
       `${targetUserPk}:${joiningUserPk}`;
-
-    multi
-      .zadd(joiningUserPk + "", 0, roomName)
-      .zadd("delCounts", "NX", 0, roomName)
-      .lrange(roomName, 0, -1, async (err, chatLogs) => {
-        if (err) console.error(err);
-        try {
-          await connection.beginTransaction();
-          const [one, two] = (
-            await connection.query(
-              "SELECT userPk, nickname FROM users WHERE userPk IN (?,?)",
-              roomName.split(":")
-            )
-          )[0];
-          const user = (one.userPk === joiningUserPk && one) || two;
-          const target = (user === one && two) || one;
-          io.to(roomName).emit("chatLogs", {
-            user: user,
-            target: target,
-            chatLogs: chatLogs,
-          });
-        } catch (err) {
-          connection.rollback();
-          console.error(err);
-        } finally {
-          connection.release();
-        }
-      })
-      .exec()
+      
+      redis.zadd(joiningUserPk + "", 0, roomName)
+      redis.zadd("delCounts", "NX", 0, roomName)
+      redis.lrange(roomName, 0, -1, async (err, chatLogs) => {
+            if (err) console.error(err);
+            try {
+              await connection.beginTransaction();
+              const [one, two] = (
+                await connection.query(
+                  "SELECT userPk, nickname FROM users WHERE userPk IN (?,?)",
+                  roomName.split(":")
+                )
+              )[0];
+              const user = (one.userPk === joiningUserPk && one) || two;
+              const target = (user === one && two) || one;
+              io.to(roomName).emit("chatLogs", {
+                user: user,
+                target: target,
+                chatLogs: chatLogs,
+              });
+            } catch (err) {
+              connection.rollback();
+              console.error(err);
+            } finally {
+              connection.release();
+            }
+          })
       .then(
-        async (res) => await io.of("/").adapter.remoteJoin(socket.id, roomName)
+        async (res) => {
+          await io.of("/").adapter.remoteJoin(socket.id, roomName)
+        }
       );
   });
 
@@ -134,10 +134,8 @@ io.on("connection", (socket) => {
       curTime: curTime,
     });
 
-    multi
-      .zadd("delCounts", "GT", 1, roomName)
-      .rpush(roomName, log)
-      .exec()
+    redis.zadd("delCounts", "GT", 1, roomName)
+    redis.rpush(roomName, log)
       .then(
         async (res) =>
           await io
@@ -162,17 +160,12 @@ io.on("connection", (socket) => {
   socket.on("leave", (data) => {
     console.log("리브리브!");
     const { userPk, roomName } = data;
-
-    multi
       // 자신이 방금 나온 방의 읽지 않은 갯수는 0으로
-      .zadd(userPk + "", "XX", 0, roomName)
+    redis.zadd(userPk + "", "XX", 0, roomName)
       // 메세지 100개로 제한.
-      .ltrim(roomName, -100, -1)
+    redis.ltrim(roomName, -100, -1)
       // 마지막 채팅으로 부터 3일간 유지
-      .expireat(roomName, Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 3)
-      .exec((err, res) => {
-        if (err) console.error(err);
-      })
+    redis.expireat(roomName, Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 3)
       .then(
         async (res) => await io.of("/").adapter.remoteLeave(socket.id, roomName)
       );
@@ -181,14 +174,13 @@ io.on("connection", (socket) => {
   socket.on("quit", (data) => {
     const { userPk, roomName } = data;
     // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터는 delCount 0일 경우 삭제
-    multi
-      .zscore("delCounts", roomName, (err, delCount) => {
+    redis.zscore("delCounts", roomName, (err, delCount) => {
         if (+delCount < 1) {
-          multi.del(roomName).zrem("delCounts", roomName).exec();
+          redis.del(roomName)
+          redis.zrem("delCounts", roomName)
         } else redis.zadd("delCounts", "LT", 0, roomName);
       })
-      .zrem(userPk + "", roomName)
-      .exec()
+    redis.zrem(userPk + "", roomName)
       .then(
         async (res) => await io.of("/").adapter.remoteLeave(socket.id, roomName)
       );

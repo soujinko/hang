@@ -41,7 +41,7 @@ router.get("/", async (req, res, next) => {
       promise.nickname = findMyUser.nickname;
       promise.startDate = startDate;
       promise.endDate = endDate;
-      console.log("메인페이지 나의 확정 약속", promise);
+      // console.log("메인페이지 나의 확정 약속", promise);
     } else {
       promise = {};
     }
@@ -71,7 +71,7 @@ router.get("/", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("내 지역 가이드!!", guide);
+    // console.log("내 지역 가이드!!", guide);
     if (guide.length > 0) {
       await guide.forEach((e) => {
         // 내가 좋아요한 목록에 있으면 true
@@ -91,7 +91,7 @@ router.get("/", async (req, res, next) => {
         )
       )
     )[0];
-    console.log("내 지역 여행자!!", traveler);
+    // console.log("내 지역 여행자!!", traveler);
     if (traveler.length > 0) {
       await traveler.forEach((e) => {
         // 내가 좋아요한 목록에 있으면 true
@@ -103,7 +103,7 @@ router.get("/", async (req, res, next) => {
       });
     }
     await connection.commit();
-    console.log("보낸다", promise, guide, traveler);
+    // console.log("보낸다", promise, guide, traveler);
     res.send({ promise, guide, traveler });
 
     connection.commit();

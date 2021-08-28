@@ -11,7 +11,7 @@ import passport from "passport";
 import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
-import http from "http";
+import https from "https";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
 import logger from "./config/winston_config.js";
@@ -21,17 +21,17 @@ dotenv.config();
 
 const app = express();
 app.use(express.static("public"));
-// const options = {
-//   // letsencrypt로 받은 인증서 경로를 입력
-//   ca: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/fullchain.pem"),
-//   key: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/cert.pem"),
-//   // requestCert: false,
-//   // rejectUnauthorized: false,
-// };
+const options = {
+  // letsencrypt로 받은 인증서 경로를 입력
+  ca: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/fullchain.pem"),
+  key: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/cert.pem"),
+  // requestCert: false,
+  // rejectUnauthorized: false,
+};
 
-// const server = https.createServer(options, app);
-const server = http.createServer(app);
+const server = https.createServer(options, app);
+// const server = http.createServer(app);
 
 const corsOption = {
   origin: [

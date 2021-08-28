@@ -10,8 +10,8 @@ import errorHandlers from "./util/error_handlers.js";
 import passport from "passport";
 import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
-// import fs from "fs";
-import http from "http";
+import fs from "fs";
+import https from "https";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
 import logger from "./config/winston_config.js";
@@ -19,33 +19,36 @@ import logger from "./config/winston_config.js";
 dotenv.config();
 
 const app = express();
-// app.use(express.static("public"));
-// const options = {
-//   // letsencrypt로 받은 인증서 경로를 입력
-//   ca: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/fullchain.pem"),
-//   key: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/privkey.pem"),
-//   cert: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/cert.pem"),
-//   // requestCert: false,
-//   // rejectUnauthorized: false,
-// };
 
-// const server = https.createServer(options, app);
-const server = http.createServer(app);
 
-const corsOption = {
-  origin: [
-    "https://3.34.95.155:443",
-    "http://3.34.95.155:443",
-    "https://54.180.143.198:443",
-    "https://localhost:3000",
-    "https://seunggyulee.shop",
-    "https://hanging.kr",
-  ],
-  credentials: true,
-  optionSuccessStatus: 200,
+app.use(express.static("public"));
+const options = {
+  // letsencrypt로 받은 인증서 경로를 입력
+  ca: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/fullchain.pem"),
+  key: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/privkey.pem"),
+  cert: fs.readFileSync("/etc/letsencrypt/live/ruzan.shop/cert.pem"),
+  // requestCert: false,
+  // rejectUnauthorized: false,
 };
 
-app.use(cors(corsOption));
+// const server = https.createServer(options, app);
+
+
+// const corsOption = {
+//   origin: [
+//     "https://3.34.95.155:443",
+//     "http://3.34.95.155:443",
+//     "https://54.180.143.198:443",
+//     "https://localhost:3000",
+//     "https://seunggyulee.shop",
+//     "https://hanging.kr",
+//   ],
+//   credentials: true,
+//   optionSuccessStatus: 200,
+// };
+
+
+app.use(cors());
 app.use(morgan("dev"));
 app.use(morgan("combined", { stream: logger.stream }));
 // 헬멧은 기본적으로 15가지 보안 기능 중 11가지 기능을 제공하고, 4가지 기능은 명시적으로 사용을 지정해야한다.
@@ -64,4 +67,6 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
-export { server };
+const server = https.createServer(options, app);
+
+export default server;

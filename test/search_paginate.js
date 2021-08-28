@@ -1,5 +1,8 @@
 import { connection } from "../models/db.js";
-import redis from '../config/redis.cluster.config.js'
+import Redis from "ioredis"
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 /**
  * For faster query, we applied:
@@ -17,7 +20,7 @@ import redis from '../config/redis.cluster.config.js'
  * 3. check variables whether changed or not
  * 4. After you replaced configs, restart the MySQL server
  * 5. Then you have to alter table unless you applied when table was created:
- *    ALTER TABLE users ADD FULLTEXT INDEX index_name (column_name) WITH PARSER ngram
+ *    ALTER TABLE users ADD FULLTEXT INDEX index_name (column_name);
  * 6. Then run : OPTIMIZE TABLE 'TABLE_NAME' if you already have some instances
  *    (for InnoDB tables, OPTIMIZE TABLE is mapped to ALTER TABLE ... FORCE,
  *     which rebuilds the table to update index statistics and free unused space in the clustered index)
@@ -27,7 +30,7 @@ import redis from '../config/redis.cluster.config.js'
  *
  * +----------+-----+--------+--------+------+-------------+------+
  * | nickname | age | gender | region | city | profileImg  | like |
- * +----------+-----+--------+--------+------+-------------+---2X9/lyQ2GMYi1tj+n5Mr1InZwy+ugFH4aKrsmxFVKds---+
+ * +----------+-----+--------+--------+------+-------------+------+
  * | gosu111  | 20  |      1 | 경기   | 서울 | afd/asfs/ew |    0 |
  * | gosu11   | 20  |      1 | 경기   | 서울 | afd/asfs/ew |    1 |
  * +----------+-----+--------+--------+------+-------------+------+
@@ -35,9 +38,11 @@ import redis from '../config/redis.cluster.config.js'
  * 21/08/15 We added ngram parser to the full text index to search in 'word boundaries' so called
  */
 
+const redis = new Redis({password:process.env.REDIS_PASSWORD})
+
 const searchAndPaginate = async (req, userPk, next) => {
   const { keyword, region, city, traveler, guide, pageNum } = req.body;
-  let sequel = `SELECT a.userPk, nickname, age, tags, gender, region, city, profileImg, 
+  let sequel = `SELECT a.userPk, nickname, age, gender, region, tags, city, profileImg, 
                 CASE WHEN a.userPk IN 
                 (SELECT targetPk FROM likes WHERE userPk = ?) 
                 THEN 1 ELSE 0 END 'like' 

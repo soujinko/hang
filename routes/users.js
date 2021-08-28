@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "crypto";
-import { getConnection, connection } from "../models/db.js";
+import { connection } from "../models/db.js";
 import NC_SMS from "../services/NC_SMS.js";
 import dotenv from "dotenv";
 import passport from "passport";
@@ -15,49 +15,35 @@ dotenv.config();
 const router = express.Router();
 const pipeline = redis.pipeline();
 // pk, nick, profileImg전달
-router.post("/sms_auth", (req, res, next) => {
+router.post("/sms_auth", async(req, res, next) => {
   const { pNum: phoneNumber, status } = req.body;
-  getConnection((conn) => {
-    try {
-      conn.beginTransaction();
-      // 회원가입이라면
-      if (status) {
-        conn.query(
-          `SELECT pNum FROM users WHERE pNum=?`,
-          [phoneNumber],
-          (err, data) => {
-            if (err) throw err;
-            if (data.length > 0) return res.sendStatus(409);
-
-            const authNumber = Math.floor(Math.random() * 90000) + 10000;
-            NC_SMS(req, next, authNumber);
-            // redis에 저장
-            // await redis.zadd('auth', authNumber, phoneNumber)
-            pipeline
-              .set(phoneNumber, authNumber)
-              .expire(phoneNumber, 60)
-              .exec()
-              .then(ok=>res.sendStatus(200))
-          }
-        );
-      // 비밀번호 찾기라면
-      } else {
-        const authNumber = Math.floor(Math.random() * 90000) + 10000;
+  try {
+    await connection.beginTransaction();
+    const authNumber = Math.floor(Math.random() * 90000) + 10000;
+    // 회원가입이라면
+    if (status) {
+      const isUserExists = (await connection.query(
+        `SELECT pNum FROM users WHERE pNum=?`,
+        [phoneNumber]))[0];
+        if (isUserExists.length > 0) return res.sendStatus(409);
         NC_SMS(req, next, authNumber);
         // redis에 저장
-        pipeline
-          .set(phoneNumber, authNumber)
-          .expire(phoneNumber, 60)
-          .exec()
-          .then(ok=>res.sendStatus(200))
-      }
-    } catch (err) {
-      conn.rollback();
-      next(err);
-    } finally {
-      conn.release();
+        // await redis.zadd('auth', authNumber, phoneNumber)
+      await redis.set(phoneNumber, authNumber, 'EX', 60)
+      res.sendStatus(200)
+    // 비밀번호 찾기라면
+    } else {
+      NC_SMS(req, next, authNumber);
+      // redis에 저장
+      await redis.set(phoneNumber, authNumber ,'EX', 60)
+      res.sendStatus(200)
     }
-  });
+  } catch (err) {
+    await connection.rollback();
+    next(err);
+  } finally {
+    await connection.release();
+  }
 });
 
 router.post("/p_auth", asyncHandle(async(req, res, next) => {
@@ -67,34 +53,24 @@ router.post("/p_auth", asyncHandle(async(req, res, next) => {
   authNumber === storedAuthNumber ? res.sendStatus(200) : res.sendStatus(406)
 }));
 
-router.post("/duplicate", (req, res, next) => {
+router.post("/duplicate", async(req, res, next) => {
   const { userId, nickname } = req.body;
   const sequel = userId
     ? `SELECT userPk FROM users WHERE userId=?`
     : `SELECT userPk FROM users WHERE nickname=?`;
   const input = userId ?? nickname;
-  getConnection((conn) => {
-    try {
-      conn.beginTransaction();
-      conn.query(sequel, [input], function (err, data) {
-        if (err) {
-          throw err;
-        } else if (data.length > 0) {
-          // 여기 throw로 하면 안됩니다. 그냥 status로
-          return res.sendStatus(409)
-        } else {
-          res.sendStatus(200);
-        }
-      });
-    } catch (err) {
-      next(err);
-    } finally {
-      conn.release();
-    }
-  });
+  try {
+    await connection.beginTransaction();
+    const isUserNicknameExists = await connection.query(sequel, [input]);
+    isUserNicknameExists[0].length > 0 ? res.sendStatus(409) : res.sendStatus(200)
+  } catch (err) {
+    next(err);
+  } finally {
+    await connection.release();
+  }
 });
 
-router.post("/", (req, res, next) => {
+router.post("/", async(req, res, next) => {
   const {
     userId,
     nickname,
@@ -117,10 +93,10 @@ router.post("/", (req, res, next) => {
       "SHA512"
     )
     .toString("base64");
-  getConnection((conn) => {
+  
     try {
-      conn.beginTransaction();
-      conn.query(
+      await connection.beginTransaction();
+      await connection.query(
         `INSERT INTO
          users(nickname, userId, password, salt, region, city, age, profileImg, gender, pNum)
          VALUES(?,?,?,?,?,?,?,?,?,?)`,
@@ -135,24 +111,17 @@ router.post("/", (req, res, next) => {
           profileImg,
           gender,
           pNum,
-        ],
-        (err, data) => {
-          if (err) {
-            conn.rollback();
-            next(err);
-          } else {
-            conn.commit();
-            res.sendStatus(201);
-          }
-        }
+        ]
       );
+      await connection.commit()
+      res.sendStatus(201);
     } catch (err) {
-      conn.rollback();
+      await connection.rollback();
       next(err);
     } finally {
-      conn.release();
+      await connection.release();
     }
-  });
+  
 });
 
 router.post("/signin", (req, res, next) => {
@@ -161,51 +130,49 @@ router.post("/signin", (req, res, next) => {
       if (err || !user) {
         return res.sendStatus(401);
       }
-      req.login(user, { session: false }, (err) => {
-        if (err) throw err;
-        const accessToken = jwt.sign(
-          {
-            userPk: user.userPk,
-            nickname: user.nickname
-          },
-          process.env.PRIVATE_KEY,
-          { expiresIn: '3h', algorithm: "HS512" }
-        );
-        const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {
-          expiresIn: '7d',
-          algorithm: "HS512",
-        });
-
-        getConnection((conn) => {
-          try {
-            conn.beginTransaction();
-            conn.query(`UPDATE users SET refreshToken=? WHERE userPk=?`, [
-              refreshToken,
-              user.userPk,
-            ]);
-            conn.commit();
-          } catch (err) {
-            conn.rollback();
-            next(err);
-          } finally {
-            conn.release();
-          }
-        });
-
-        res
-          .status(200)
-          .cookie("jwt", accessToken, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-          })
-          .cookie("refresh", refreshToken, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-          })
-          .json({ accessToken });
+      const accessToken = jwt.sign(
+        {
+          userPk: user.userPk,
+          nickname: user.nickname
+        },
+        process.env.PRIVATE_KEY,
+        { expiresIn: '3h', algorithm: "HS512" }
+      );
+      const refreshToken = jwt.sign({}, process.env.PRIVATE_KEY, {
+        expiresIn: '7d',
+        algorithm: "HS512",
       });
+      req.login(user, { session: false }, async(err) => {
+        if (err) throw err;
+        
+        try {
+          await connection.beginTransaction();
+          await connection.query(`UPDATE users SET refreshToken=? WHERE userPk=?`, [
+            refreshToken,
+            user.userPk,
+          ]);
+          await connection.commit();
+        } catch (err) {
+          await connection.rollback();
+          next(err);
+        } finally {
+          await connection.release();
+        }
+      });
+      
+      res
+        .status(200)
+        .cookie("jwt", accessToken, {
+          httpOnly: true,
+          sameSite: "none",
+          secure: true,
+        })
+        .cookie("refresh", refreshToken, {
+          httpOnly: true,
+          sameSite: "none",
+          secure: true,
+        })
+        .json({ accessToken });
     })(req, res);
   } catch {
     next(err);
@@ -241,15 +208,17 @@ router.get("/chat", verification, asyncHandle(async(req, res, next) => {
         for (let v of chatList[i].split(':')) {
           if (userPk !== +v && +v) {
           const nickAndProf = await connection.query('SELECT profileImg, nickname FROM users WHERE userPk=?', [+v])
-          
-          obj['nickname'] = nickAndProf[0][0].nickname
-          obj['profileImg'] = nickAndProf[0][0].profileImg
-          obj['targetPk'] = +v
+          const value = nickAndProf[0][0]
+          if (value) {
+            obj['nickname'] = value.nickname
+            obj['profileImg'] = value.profileImg
+            obj['targetPk'] = +v
+          }
           }
         }
       } else {
         obj['unchecked'] = chatList[i]
-        result.push(obj)
+        if (obj.nickname) result.push(obj)
         obj = {}
       }
     }
@@ -395,8 +364,11 @@ router.post('/password', async (req, res, next) => {
 })
 
 
-router.get("/a", verification, (req, res) => {
-  res.status(200).json({ status: true });
+router.get("/a", async(req, res) => {
+  await redis.set('hello', 'world')
+  await redis.expire('hello', 60)
+  const data = await redis.get('hello')
+  res.status(200).json({ data });
 });
 
 router.get(

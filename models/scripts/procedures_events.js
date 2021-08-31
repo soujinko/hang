@@ -24,7 +24,7 @@ import { connection } from "../db.js";
 // // 지금부터 24시간마다 실행
 // const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 24 hour STARTS NOW() ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
 // // 1일에 1번 지정 시간 실행
-// const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 1 DAY STARTS '2021-08-27 04:00:00' ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
+// const DBCleanerEvent = `CREATE EVENT IF NOT EXISTS DBCleanerEvent ON SCHEDULE EVERY 1 DAY STARTS '2021-08-30 20:00:00' ON COMPLETION PRESERVE ENABLE DO CALL DBCleaner();`;
 
 async function keepAlive() {
   try {

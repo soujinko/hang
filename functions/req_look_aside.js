@@ -42,7 +42,6 @@ const checkLikeRedis = (req, res, next) => {
   redis.get(`like=${userPk}`, (error, likeusers) => {
     if (error) next();
     if (likeusers !== null) {
-      // console.log("redisdata-like", likeusers);
       res.status(200).send(likeusers);
     } else next();
   });

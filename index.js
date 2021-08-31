@@ -11,7 +11,7 @@ import passport from "passport";
 import passportConfig from "./passport/passport.js";
 import swaggerDocs from "./config/swagger_config.js";
 import fs from "fs";
-import https from "https";
+import http from "http";
 import verification from "./middleware/verification.js";
 import keepAlive from "./models/scripts/procedures_events.js";
 import logger from "./config/winston_config.js";
@@ -31,17 +31,28 @@ const options = {
   // rejectUnauthorized: false,
 };
 
-const server = https.createServer(options, app);
+// const server = https.createServer(options, app);
 // const server = http.createServer(app);
-
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 100 requests per windowMs
 });
-
-app.use(limiter);
+const corsOption = {
+  origin: [
+    "https://3.34.95.155:443",
+    "http://3.34.95.155:443",
+    "https://54.180.143.198:443",
+    "https://localhost:3000",
+    "https://seunggyulee.shop",
+    "https://hanging.kr",
+  ],
+  credentials: true,
+  optionSuccessStatus: 200,
+};
+app.enable("trust proxy");
 app.use(cors(corsOption));
+app.use(limiter);
 app.use(morgan("dev"));
 app.use(morgan("combined", { stream: logger.stream }));
 // 헬멧은 기본적으로 15가지 보안 기능 중 11가지 기능을 제공하고, 4가지 기능은 명시적으로 사용을 지정해야한다.
@@ -60,9 +71,6 @@ app.use(errorHandlers);
 
 setInterval(keepAlive, 60 * 240 * 1000);
 
-<<<<<<< HEAD
-=======
-const server = https.createServer(options, app);
+const server = http.createServer(app);
 
->>>>>>> 597e836ff8d533fe484e4b1dabf3d37e8ee3c35d
 export default server;

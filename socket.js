@@ -15,20 +15,11 @@ const subClient = pubClient.duplicate();
 io.adapter(redisAdapter(pubClient, subClient));
 
 // 로그인 할 때 유저 정보 받아서 socket id와 함께 저장하기
-<<<<<<< HEAD
-// let currentOn = {};
-=======
->>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
 
 io.on("connection", (socket) => {
   socket.on("login", async (user) => {
     const userPk = user.uid;
     let id = socket.id;
-<<<<<<< HEAD
-    console.log("소켓테스트1", userPk, id);
-
-=======
->>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
     // zscan 으로 전체 찾는 것 대신 가장 큰거 하나 찾아서 검증하는 zrevrange로 바꿈
     // zmemebers가 아무도 없더라도 room, unchecked가 undefined이므로 0과의 비교가 false가 되어 검증 가능
     const [room, unchecked] = await redis.zrevrange(
@@ -39,22 +30,12 @@ io.on("connection", (socket) => {
     );
     if (unchecked > 0) await io.sockets.to(id).emit("unchecked");
     if (userPk) await redis.hset(`currentOn`, userPk, id);
-<<<<<<< HEAD
-    console.log("현재 접속중", await redis.hgetall("currentOn"));
-=======
->>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
   });
 
   socket.on("request", async (data) => {
     //  data.uid 는 클라이언트에서 보내준 타겟의 userPk
     const userPk = data.uid;
-<<<<<<< HEAD
-    let stringPk = String(userPk);
     redis.hget(`currentOn`, userPk, async (error, id) => {
-      // console.log("리퀘스트 보낸당", id);
-=======
-    redis.hget(`currentOn`, userPk, async (error, id) => {
->>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
       if (id) await io.sockets.to(id).emit("requested", true);
     });
   });
@@ -129,15 +110,11 @@ io.on("connection", (socket) => {
     });
 
     redis.zadd("delCounts", "GT", 1, roomName);
-    redis
-      .rpush(roomName, log)
-      .then(
-        async (res) => {
-          await io
-            .to(roomName)
-            .emit("updateMessage", { userPk: userPk, message: message })
-        }  
-      );
+    redis.rpush(roomName, log).then(async (res) => {
+      await io
+        .to(roomName)
+        .emit("updateMessage", { userPk: userPk, message: message });
+    });
   });
 
   // 상대방이 채팅방 목록을 보고 있으며 메시지를 송신한 사람과의 대화방은 없을 때 새로운 방을 생성
@@ -170,8 +147,7 @@ io.on("connection", (socket) => {
   socket.on("quit", (data) => {
     const { userPk, targetPk } = data;
     const roomName =
-      (userPk < targetPk && `${userPk}:${targetPk}`) ||
-      `${targetPk}:${userPk}`;
+      (userPk < targetPk && `${userPk}:${targetPk}`) || `${targetPk}:${userPk}`;
     // 사용자의 sorted set으로부터 채팅방 삭제. 채팅방 자체의 데이터는 delCount 0일 경우 삭제
     redis.zscore("delCounts", roomName, (err, delCount) => {
       if (+delCount < 1) {
@@ -187,23 +163,18 @@ io.on("connection", (socket) => {
   });
 
   //  로그아웃 혹은 앱 웹 끄면 소켓 삭제
-<<<<<<< HEAD
-  socket.on("logout", (data) => {
-    socket.on("disconnect", async () => {
-      await redis.hdel("currentOn", data.uid);
-      // delete currentOn[data.uid];
-    });
-=======
-  socket.on("logout", async(data) => {
+  socket.on("logout", async (data) => {
     await redis.hdel("currentOn", data.uid);
   });
 
   socket.on("disconnect", async () => {
-    let currentOn = await redis.hgetall('currentOn')
-    Object.assign(currentOn, {length:Math.max(...Object.keys(currentOn).map(x=>+x))})
-    await redis.hdel('currentOn', Array.prototype.indexOf.call(currentOn, socket.id)+'')
->>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
+    let currentOn = await redis.hgetall("currentOn");
+    Object.assign(currentOn, {
+      length: Math.max(...Object.keys(currentOn).map((x) => +x)),
+    });
+    await redis.hdel(
+      "currentOn",
+      Array.prototype.indexOf.call(currentOn, socket.id) + ""
+    );
   });
 });
-
-  

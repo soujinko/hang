@@ -2,6 +2,7 @@ import express from "express";
 import { connection } from "../models/db.js";
 import searchAndPaginate from "../functions/search_paginate.js";
 import asyncHandle from "../util/async_handler.js";
+import xssFilter from '../middleware/xssFilter.js';
 
 const router = express.Router();
 
@@ -118,7 +119,7 @@ router.get("/", async (req, res, next) => {
 });
 
 router.post(
-  "/search",
+  "/search", xssFilter,
   asyncHandle(async (req, res, next) => {
     const { userPk } = res.locals.user;
     const result = await searchAndPaginate(req, userPk, next);

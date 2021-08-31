@@ -1,6 +1,6 @@
 import { connection } from "../models/db.js";
 
-const checkDate = async (userPk, startMyDate, endMyDate) => {
+const checkDate = async (userPk, startMyDate, endMyDate, res) => {
   connection.beginTransaction();
   // 나의 확정약속/여행정보 모두 불러오기
   const userTripDates = JSON.parse(
@@ -25,18 +25,18 @@ const checkDate = async (userPk, startMyDate, endMyDate) => {
       let endOld = Date.parse(e[1]);
 
       if (startMyDate > startOld && startMyDate < endOld) {
-        res
+        return res
           .status(400)
           .send({ errorMessage: "해당 날짜에 이미 약속이 있어요" });
         // throw new Error("해당 날짜에 이미 약속이 있어요");
       } else if (endMyDate > startOld && endMyDate < endOld) {
-        res
+        return res
           .status(400)
           .send({ errorMessage: "해당 날짜에 이미 약속이 있어요" });
 
         // throw new Error("해당 날짜에 이미 약속이 있어요");
       } else if (startMyDate <= startOld && endMyDate >= endOld) {
-        res
+        return res
           .status(400)
           .send({ errorMessage: "해당 날짜에 이미 약속이 있어요" });
 

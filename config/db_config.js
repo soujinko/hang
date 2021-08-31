@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const config = {
-  host: "13.124.67.85",
+  host: "15.165.19.129",
   user: "hanghang",
   password: process.env.DB_PASSWORD,
   database: "hang",

@@ -92,7 +92,7 @@ router.get("/detail", async (req, res, next) => {
         }
       });
     } else {
-      throw new Error("요청 알람 없음");
+      res.status(200).send({ errorMessage: "요청 알람 없음" });
     }
   } catch (err) {
     console.error(err);
@@ -124,7 +124,7 @@ router.delete("/", async (req, res, next) => {
     );
 
     if (result[0].affectedRows === 0) {
-      throw new Error("삭제할 알람 없음");
+      res.status(400).send({ errorMessage: "삭제할 알람 없음" });
     } else {
       await connection.commit();
       res.status(200).send();

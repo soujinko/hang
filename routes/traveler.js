@@ -22,9 +22,8 @@ router.post("/", async (req, res, next) => {
       )
     )[0][0];
 
-    if (getMyProfile.guide === 0) {
-      throw new Error("내 지역 길잡이를 활성화하세요");
-    }
+    if (getMyProfile.guide === 0)
+      res.status(400).send({ errorMessage: "내 지역 길잡이를 활성화하세요" });
 
     // 해당 여행의 날짜 여행 주인 pk 가져오기
     const checkTripDate = JSON.parse(
@@ -42,15 +41,17 @@ router.post("/", async (req, res, next) => {
     ]);
     // console.log("checkTripDate1", checkTripDate);
     if (checkTripDate.length === 0)
-      throw new Error("신청이 불가한 여행입니다.");
+      return res.status(400).send({ errorMessage: "신청이 불가한 여행입니다" });
+
     if (checkTripDate[0][4] !== getMyProfile.region)
-      throw new Error("신청이 불가한 지역입니다.");
+      return res
+        .status(400)
+        .send({ errorMessage: "여행 지역을 확인해 주세요" });
+
     let startMyDate = Date.parse(checkTripDate[0][0]);
     let endMyDate = Date.parse(checkTripDate[0][1]);
     let pagePk = checkTripDate[0][2];
     let partner = checkTripDate[0][3];
-
-    // console.log("checkTripDate", checkTripDate, startMyDate, endMyDate, pagePk);
 
     const checkExistRequest = JSON.parse(
       JSON.stringify(
@@ -61,22 +62,24 @@ router.post("/", async (req, res, next) => {
     )[0];
 
     // 해당 여행이 기한 지났으면 오류
-    if (endMyDate < Date.parse(today)) {
-      throw new Error("기한이 지난 여행입니다");
-    }
+    if (endMyDate < Date.parse(today))
+      return res.status(400).send({ errorMessage: "기한이 지난 여행입니다" });
 
     // 이미 신청했으면 오류 / 파트너가 있으면 오류
     if (checkExistRequest.length > 0) {
-      throw new Error("이미 길잡이 신청한 여행입니다");
+      return res
+        .status(400)
+        .send({ errorMessage: "이미 길잡이 신청한 여행입니다" });
     } else if (partner !== null) {
-      throw new Error("이미 길잡이가 있는 여행입니다.");
+      return res
+        .status(400)
+        .send({ errorMessage: "이미 길잡이가 있는 여행입니다" });
     }
 
     // 나의 확정 약속과 겹치면 false 안겹치면 true
-    const checkDates = await checkDate(userPk, startMyDate, endMyDate);
+    const checkDates = await checkDate(userPk, startMyDate, endMyDate, res);
 
     const insertRequest = async () => {
-      console.log("checkDates", checkDates);
       if (checkDates) {
         const result = await connection.query(
           `INSERT INTO requests (tripId, reqPk, recPk) VALUES (${tripId}, ${userPk}, ${pagePk})`
@@ -85,9 +88,7 @@ router.post("/", async (req, res, next) => {
 
         await connection.commit();
         res.status(201).send();
-      } else {
-        throw new Error();
-      }
+      } else return;
     };
     // 약속 데이터 등록
     insertRequest();

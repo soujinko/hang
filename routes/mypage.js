@@ -2,6 +2,7 @@ import express from "express";
 import { connection } from "../models/db.js";
 import { checkMypageRedis } from "../functions/req_look_aside.js";
 import redis from "../config/redis.cluster.config.js";
+import checkDate from "../functions/checkDatefunc.js";
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get("/profile/:pagePk", checkMypageRedis, async (req, res, next) => {
     connection.beginTransaction();
     const { userPk } = res.locals.user;
     const { pagePk } = req.params;
-    console.log("유저상세페이지", userPk, pagePk);
+
     if (userPk === pagePk) {
       console.log(true);
     } else {
@@ -42,7 +43,6 @@ router.get("/profile/:pagePk", checkMypageRedis, async (req, res, next) => {
     console.log("findlikes1", findlikes);
 
     if (parseInt(userPk) === parseInt(pagePk)) {
-      console.log("마이페이지 레디스 저장");
       await redis.hmset(`mypage-${userPk}`, {
         userInfo: JSON.stringify(userInfo),
         tripInfo: JSON.stringify(tripInfo),
@@ -50,10 +50,8 @@ router.get("/profile/:pagePk", checkMypageRedis, async (req, res, next) => {
       });
       // 유효기간 1일
       await redis.expire(`mypage-${userPk}`, 86400);
-      console.log("마이페이지", userInfo, tripInfo);
       res.send({ userInfo, tripInfo });
     } else {
-      console.log("유저 페이지 레디스 저장");
       userInfo.like = findlikes.includes(parseInt(pagePk)) ? true : false;
       await redis.hmset(`mypage-${pagePk}`, {
         userInfo: JSON.stringify(userInfo),
@@ -214,75 +212,41 @@ router.post("/create_trip", async (req, res, next) => {
 
     // 끝날이 시작날보다 전 이거나, 오늘 날짜보다 시작날이 작다면 error
     if (startNewDate > endNewDate) {
-      throw new Error("날짜 선택 오류");
+      return res.status(400).send({ errorMessage: "날짜 선택 오류" });
     }
     if (startNewDate < Date.parse(today)) {
-      throw new Error("날짜 선택 오류");
+      return res.status(400).send({ errorMessage: "날짜 선택 오류" });
     }
 
-    // 내가 등록하 여행 날짜 리스트와 나를 파트너로 등록한 여행 날짜 리스트
-    const myTripDates = JSON.parse(
-      JSON.stringify(
-        await connection.query(
-          `select left(startDate, 10), left(endDate, 10), tripId from trips where userPk=? or partner=?`,
-          [userPk, userPk]
-        )
-      )
-    )[0];
-    //  새 여행 저장하는 함수, 레디스 디비 업데이트
     const saveNewTrip = async (tripInfo) => {
-      await connection.query(
-        `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, tags) VALUES (?,?,?,?,?,?,?)`,
-        [userPk, region, city, startDate, endDate, tripInfo, tags]
-      );
-      await connection.commit();
+      if (checkDates) {
+        await connection.query(
+          `INSERT INTO trips (userPk, region, city, startDate, endDate, tripInfo, tags) VALUES (?,?,?,?,?,?,?)`,
+          [userPk, region, city, startDate, endDate, tripInfo, tags]
+        );
+        await connection.commit();
 
-      let NewTripInfo = JSON.parse(
-        JSON.stringify(
-          await connection.query("select * from trips where userPk=?", [userPk])
-        )
-      )[0];
+        let NewTripInfo = JSON.parse(
+          JSON.stringify(
+            await connection.query("select * from trips where userPk=?", [
+              userPk,
+            ])
+          )
+        )[0];
 
-      let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
-      await redis.hmset(`mypage-${userPk}`, {
-        tripInfo: JSON.stringify(NewTripInfo),
-      });
+        let newTripId = NewTripInfo[NewTripInfo.length - 1].tripId;
+        await redis.hmset(`mypage-${userPk}`, {
+          tripInfo: JSON.stringify(NewTripInfo),
+        });
 
-      res.status(201).send({ newTripId });
+        res.status(201).send({ newTripId });
+      } else return;
     };
 
-    if (myTripDates.length > 0) {
-      let myTripDates2 = myTripDates.map((e) => [
-        e["left(startDate, 10)"],
-        e["left(endDate, 10)"],
-      ]);
+    const checkDates = await checkDate(userPk, startNewDate, endNewDate, res);
 
-      // 만약 내 여행일정과 겹치면 에러
-      let count = 0;
-      myTripDates2.forEach((e) => {
-        let startOld = Date.parse(e[0]);
-        let endOld = Date.parse(e[1]);
-        // console.log("start, end date", startOld, endOld);
-        if (startNewDate > startOld && startNewDate < endOld) {
-          throw new Error("날짜 겹침");
-        } else if (endNewDate > startOld && endNewDate < endOld) {
-          throw new Error("날짜 겹침");
-        } else if (startNewDate <= startOld && endNewDate >= endOld) {
-          throw new Error("날짜 겹침");
-        } else {
-          count += 1;
-        }
-      });
-      // db에 여행 등록
-      if (count === myTripDates2.length) {
-        saveNewTrip(tripInfo);
-      } else {
-        throw new Error("반복문 돌다가 오류");
-      }
-    } else {
-      // 확정 약속과 일정 안겹치면 새 여행 등록
-      saveNewTrip(tripInfo);
-    }
+    saveNewTrip(tripInfo);
+
     // `select tripId from trips where startDate='${startDate}' and endDate='${endDate}'`
   } catch (err) {
     console.error("에러메시지 확인", err.message);
@@ -499,7 +463,7 @@ router.post("/make_promise", async (req, res, next) => {
     )[0][0];
     // console.log(userPk, ownerPk, getPks.reqPk, getPks.recPk, getPks);
     if (userPk !== getPks.reqPk && userPk !== getPks.recPk) {
-      throw new Error("나와 관련된 약속이 아닙니다");
+      res.status(400).send({ errorMessage: "나와 관련된 약속이 아닙니다" });
     }
 
     // 파트너로 등록할 pk 설정

@@ -199,7 +199,7 @@ router.get("/promise", async (req, res, next) => {
 });
 
 // 여행 등록하기
-router.post("/create_trip", async (req, res, next) => {
+router.post("/create_trip", xssFilter, async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { region, city, startDate, endDate, tripInfo, tags } = req.body;
@@ -436,7 +436,7 @@ router.patch("/reject_confirm", async (req, res, next) => {
 });
 
 // 나의 약속 확정 // 중복수락 안되게
-router.post("/make_promise", async (req, res, next) => {
+router.post("/make_promise", xssFilter, async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;

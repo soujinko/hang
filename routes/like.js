@@ -2,6 +2,7 @@ import express from "express";
 import redis from '../config/redis.cluster.config.js'
 import { connection } from "../models/db.js";
 import { checkLikeRedis } from "../functions/req_look_aside.js";
+import xssFilter from '../middleware/xssFilter.js';
 
 
 
@@ -37,7 +38,7 @@ router.get("/", checkLikeRedis, async (req, res) => {
 });
 
 // 이미 디비에 있다면 좋아요 취소, 없다면 좋아요 등록
-router.post("/", async (req, res, next) => {
+router.post("/", xssFilter, async (req, res, next) => {
   let updatePk;
   try {
     connection.beginTransaction();

@@ -38,6 +38,10 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // limit each IP to 100 requests per windowMs
 });
+<<<<<<< HEAD
+=======
+
+>>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
 const corsOption = {
   origin: [
     "https://3.34.95.155:443",
@@ -50,7 +54,11 @@ const corsOption = {
   credentials: true,
   optionSuccessStatus: 200,
 };
+<<<<<<< HEAD
 app.enable("trust proxy");
+=======
+app.enable('trust proxy')
+>>>>>>> 27052cd94d729327dbd7ed227332994a5a6b3907
 app.use(cors(corsOption));
 app.use(limiter);
 app.use(morgan("dev"));

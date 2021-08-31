@@ -1,6 +1,7 @@
 import express from "express";
 import { connection } from "../models/db.js";
 import checkDate from "../functions/checkDatefunc.js";
+import xssFilter from '../middleware/xssFilter.js';
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", xssFilter, async (req, res, next) => {
   try {
     connection.beginTransaction();
     const { userPk } = res.locals.user;

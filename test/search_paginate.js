@@ -1,8 +1,5 @@
 import { connection } from "../models/db.js";
-import Redis from "ioredis"
-import dotenv from 'dotenv'
-
-dotenv.config()
+import redis from '../config/redis.cluster.config.js'
 
 /**
  * For faster query, we applied:
@@ -20,7 +17,7 @@ dotenv.config()
  * 3. check variables whether changed or not
  * 4. After you replaced configs, restart the MySQL server
  * 5. Then you have to alter table unless you applied when table was created:
- *    ALTER TABLE users ADD FULLTEXT INDEX index_name (column_name);
+ *    ALTER TABLE users ADD FULLTEXT INDEX index_name (column_name) WITH PARSER ngram;
  * 6. Then run : OPTIMIZE TABLE 'TABLE_NAME' if you already have some instances
  *    (for InnoDB tables, OPTIMIZE TABLE is mapped to ALTER TABLE ... FORCE,
  *     which rebuilds the table to update index statistics and free unused space in the clustered index)
@@ -37,8 +34,6 @@ dotenv.config()
  * 
  * 21/08/15 We added ngram parser to the full text index to search in 'word boundaries' so called
  */
-
-const redis = new Redis({password:process.env.REDIS_PASSWORD})
 
 const searchAndPaginate = async (req, userPk, next) => {
   const { keyword, region, city, traveler, guide, pageNum } = req.body;

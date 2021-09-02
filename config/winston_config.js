@@ -57,7 +57,7 @@ const logger = winston.createLogger({
     new SlackHook({
       level: "error",
       webhookUrl:
-        "https://hooks.slack.com/services/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",
+        "https://hooks.slack.com/services/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",
       channel: "errors",
       username: "ERROR BOT",
       unfurlLinks: true,

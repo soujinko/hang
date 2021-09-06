@@ -16,6 +16,7 @@
 </p>
 
 ## 🏘 <a href="https://hanging.kr">Home Page</a> / <a href="https://play.google.com/store/apps/details?id=kr.hanging.twa">PlayStore</a>
+## <a href="https://github.com/BJS-kr/HANG-BackEnd/wiki">📌 기술 및 고민 정리 - WIKI</a>
 나만 아는곳, 너만 아는 곳. 함께 여행을 떠나봐요 ! 
 
 ## 🎉 행(HANG) 서비스 소개
@@ -31,7 +32,7 @@
 ### 👉 태그를 등록해보세요
 > - 여행등록시나 프로필수정에서 본인의 성향에 맞는 태그를 등록해서 좀 더 정확한 일정을 잡을수 있어요.
 
-## <a href="https://github.com/BJS-kr/HANG-BackEnd/wiki">📌 기술 및 고민 정리 - WIKI</a>
+
 ## 📌 주요 기능
 |<a href="https://github.com/dltmdrbtjd/HANG/wiki/%EC%A3%BC%EC%9A%94-%EA%B8%B0%EB%8A%A5-%EC%86%8C%EA%B0%9C#-%EB%A1%9C%EA%B7%B8%EC%9D%B8-%ED%8E%98%EC%9D%B4%EC%A7%80">🔗로그인 페이지</a>|<a href="https://github.com/dltmdrbtjd/HANG/wiki/%EC%A3%BC%EC%9A%94-%EA%B8%B0%EB%8A%A5-%EC%86%8C%EA%B0%9C#-%ED%9A%8C%EC%9B%90%EA%B0%80%EC%9E%85-%ED%8E%98%EC%9D%B4%EC%A7%80">🔗회원가입 페이지</a>|<a href="https://github.com/dltmdrbtjd/HANG/wiki/%EC%A3%BC%EC%9A%94-%EA%B8%B0%EB%8A%A5-%EC%86%8C%EA%B0%9C#-%EC%A6%90%EA%B2%A8%EC%B0%BE%EA%B8%B0-%ED%8E%98%EC%9D%B4%EC%A7%80">🔗즐겨찾기 페이지</a>|<a href="https://github.com/dltmdrbtjd/HANG/wiki/%EC%A3%BC%EC%9A%94-%EA%B8%B0%EB%8A%A5-%EC%86%8C%EA%B0%9C#-%EA%B2%80%EC%83%89-%ED%8E%98%EC%9D%B4%EC%A7%80">🔗검색 페이지</a>|<a href="https://github.com/dltmdrbtjd/HANG/wiki/%EC%A3%BC%EC%9A%94-%EA%B8%B0%EB%8A%A5-%EC%86%8C%EA%B0%9C#-%EC%B1%84%ED%8C%85-%ED%8E%98%EC%9D%B4%EC%A7%80">🔗채팅 페이지</a>|
 |:--:|:--:|:--:|:--:|:--:|

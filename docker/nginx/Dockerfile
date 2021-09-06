@@ -1,8 +1,6 @@
 FROM nginx
 VOLUME /etc/letsencrypt
 
-MAINTAINER t<t@test.com>
-
 EXPOSE 80
 EXPOSE 443
 

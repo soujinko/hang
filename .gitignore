@@ -1,7 +1,0 @@
-node_modules
-.prettierrc.js
-.env
-test/t.js
-routes/.bash_history
-.gitignore
-db_config.js

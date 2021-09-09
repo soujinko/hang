@@ -1,10 +1,8 @@
-import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
-import { connection } from '../models/db.js'
 
 dotenv.config()
 
-const verification = async (req, res, next) => {
+const verification = async (req, res, next, connection, jwt) => {
   
   // 토큰 자체가 없는 경우 or cookies jwt와 headers jwt가 다른경우
   if (!req.cookies?.jwt || req.cookies?.jwt !== req.headers.token) return res.sendStatus(401)

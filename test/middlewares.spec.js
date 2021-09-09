@@ -68,9 +68,9 @@ it('middleware/verification case 3', async() => {
 // jwt는 유효기간이 경과했지만 변조되지 않았고 refresh는 성공한 경우
 it('middleware/verification case 4', async() => {
   const connection = {
-    beginTransaction:jest.fn(),
+    beginTransaction: () => {},
     query:jest.fn().mockReturnValue([[{refreshToken:'refresh'}]]),
-    release:jest.fn()
+    release: () => {}
   }
   const req = { 
     cookies: {jwt:'user', refresh: 'refresh'}, 
@@ -85,7 +85,7 @@ it('middleware/verification case 4', async() => {
   const next = jest.fn()
   const jwt = {
     verify: jest.fn().mockReturnValueOnce(new Error()).mockReturnValue(1),
-    sign: jest.fn()
+    sign: () => {}
   }
   
   const result = await verification(req, res, next, connection, jwt)

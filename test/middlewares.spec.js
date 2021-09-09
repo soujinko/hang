@@ -8,13 +8,15 @@ it('middleware/xssFilter', async() => {
     body:
     {
       1:'<script>your password is mine</script>',
-      2:['<script>your password is mine</script>','<script>your password is mine</script>']
+      2:['<script>your account is mine</script>','<script>your secret is mine</script>'],
+      3:{1:'<script>your password is mine</script>', 2:['<script>your account is mine</script>', '<script>your secret is mine</script>']},
+      4:'I\'m not dangerous :)'
     }
   }
   const res = {}
   const next = jest.fn()
   await xssFilter(req, res, next)
-  expect(req.body).toEqual({ '1': '','2': ','})
+  expect(req.body).toEqual({ 1: '', 2: [ '', '' ], 3:{ '1': '', '2': [ '', '' ] }, 4:'I\'m not dangerous :)'})
   expect(next).toHaveBeenCalledTimes(1)
 })
 

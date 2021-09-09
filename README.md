@@ -13,6 +13,7 @@
   <img src='https://img.shields.io/badge/Socket.io-4.1.3-white?logo=Socket.io'>
   <img src='https://img.shields.io/badge/Swagger-3.0-green?logo=Swagger'>
   <img src='https://img.shields.io/badge/NginX-1.21-green?logo=NGINX'>
+  <img src='https://img.shields.io/badge/Jest-27.0.6-orange?logo=Jest'>
 </p>
 
 ## 🏘 <a href="https://hanging.kr">Home Page</a> / <a href="https://play.google.com/store/apps/details?id=kr.hanging.twa">PlayStore</a>

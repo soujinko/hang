@@ -82,7 +82,7 @@ it('middleware/verification case 4', async() => {
       })
     }),
   };
-  const next = jest.fn(x=>x)
+  const next = jest.fn()
   const jwt = {
     verify: jest.fn().mockReturnValueOnce(new Error()).mockReturnValue(1),
     sign: jest.fn()

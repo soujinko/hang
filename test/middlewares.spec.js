@@ -2,7 +2,7 @@ import xssFilter from '../middleware/xssFilter.js';
 import verification from '../middleware/verification.js';
 import jwt from 'jsonwebtoken'
 
-// xssFilter 처리 시험
+// xssFilter 처리
 it('middleware/xssFilter', async() => {
   const req = {
     body:
@@ -20,7 +20,7 @@ it('middleware/xssFilter', async() => {
   expect(next).toHaveBeenCalledTimes(1)
 })
 
-// 토근이 정상적으로 들어올 경우
+// 토큰이 정상적으로 들어올 경우
 it('middleware/verification case 1', () => {
   const req = { cookies: {jwt:'user'}, headers: {token:'user'} }
   let res = { locals: {} }
@@ -35,8 +35,8 @@ it('middleware/verification case 1', () => {
   expect(jwt.verify.mock.calls[0][0]).toBe('user')
 })
 
+// 토큰의 값이 일치하지 않는 경우
 it('middleware/verification case 2', () => {
-  // 토큰이 정상적으로 들어오지 않은 경우
   const req = { cookies: {jwt:'user1'}, headers: {token:'user2'} }
   const res = {sendStatus: jest.fn(x=>x)}
   const next = jest.fn()

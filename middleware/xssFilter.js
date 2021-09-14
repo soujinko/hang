@@ -7,7 +7,6 @@ const { sanitize } = DOMPurify(window)
 const purifier = async(body) => {
   if (!body) return
   for (let prop of Object.keys(body)) {
-    console.log('key:'+prop, typeof body[prop])
     if (typeof body[prop] === 'string'){ 
       if (body[prop] !== '0') body[prop] = await sanitize(body[prop])
     }

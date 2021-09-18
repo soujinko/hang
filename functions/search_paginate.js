@@ -124,12 +124,12 @@ const searchAndPaginate = async (req, userPk, next) => {
   try {
     await connection.beginTransaction();
     const data = await connection.query(sequel, inputs);
-    await connection.release(); // return이 있어서 finally가 실행 안될까봐 넣어 둠
     return JSON.parse(JSON.stringify(data[0]));
   } catch (err) {
     await connection.rollback();
-    await connection.release();
     next(err);
+  } finally {
+    await connection.release();
   }
 };
 

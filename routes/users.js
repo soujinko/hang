@@ -35,47 +35,47 @@ const ITERATION_NUM = process.env.ITERATION_NUM
 router.post(
   "/sms_auth", 
   xssFilter, 
-  POST_sms_auth(connection, NC_SMS, redis).route(req, res, next)
+  POST_sms_auth(connection, NC_SMS, redis)
   );
 router.post(
   "/p_auth", 
   xssFilter, 
   asyncHandle(
-    POST_p_auth(redis).route(req, res)
+    POST_p_auth(redis)
     )
   );
 router.post(
   "/duplicate", 
   xssFilter, 
-  POST_duplicate(connection).route(req, res, next)
+  POST_duplicate(connection)
   );
 router.post(
   "/", 
   xssFilter, 
-  POST(Crypto, connection, ITERATION_NUM).route(req, res, next)
+  POST(Crypto, connection, ITERATION_NUM)
   );
 router.post(
   "/signin", 
   xssFilter, 
-  POST_signIn(passport, jwt, connection, PRIVATE_KEY).route(req, res, next)
+  POST_signIn(passport, jwt, connection, PRIVATE_KEY)
   );
 router.delete(
   "/signout", 
   verification, 
-  DELETE_signOut().route(req, res, next)
+  DELETE_signOut()
   );
 router.get(
   "/chat", 
   verification, 
   asyncHandle(
-    GET_chat(zscanner, connection, redis).route(req, res, next)
+    GET_chat(zscanner, connection, redis)
     )
   );
 router.get(
   '/block', 
   verification, 
   asyncHandle(
-    GET_block(redis, connection).route(req, res, next)
+    GET_block(redis, connection)
     )
   );
 router.post(
@@ -83,32 +83,32 @@ router.post(
   xssFilter, 
   verification, 
   asyncHandle(
-    POST_block(redis, connection).route(req, res, next)
+    POST_block(redis, connection)
     )
   );
 router.patch(
   '/block', 
   verification, 
   asyncHandle(
-    PATCH_block(redis).route(req, res)
+    PATCH_block(redis)
     )
   );
 router.delete(
   '/quit', 
   verification, 
   asyncHandle(
-    DELETE_quit(zscanner, redis, connection).route(req, res, next)
+    DELETE_quit(zscanner, redis, connection)
     )
   );
 router.post(
   '/exists', 
   xssFilter, 
-  POST_exists(connection).route(req, res, next)
+  POST_exists(connection)
   );
 router.post(
   '/password', 
   xssFilter, 
-  POST_password(Crypto, connection, ITERATION_NUM).route(req, res, next)
+  POST_password(Crypto, connection, ITERATION_NUM)
   );
 
 export default router;

@@ -14,7 +14,7 @@ it('router users/sms_auth case 1', async() => {
   const NC_SMS = jest.fn()
   const redis = {set: jest.fn()}
   
-  await sms_auth(req, res, next, connection, NC_SMS, redis)
+  aawait (POST_sms_auth(connection, NC_SMS, redis))(req, res, next)
 
   expect(NC_SMS.mock.calls[0][2]).toBeGreaterThan(10000)
   expect(NC_SMS.mock.calls[0][2]).toBeLessThan(100000)
@@ -38,7 +38,7 @@ it('router users/sms_auth case 2', async() => {
   const NC_SMS = jest.fn()
   const redis = {set: jest.fn()}
   
-  await sms_auth(req, res, next, connection, NC_SMS, redis)
+  await (POST_sms_auth(connection, NC_SMS, redis))(req, res, next)
   
   expect(connection.query.mock.calls[0][1][0]).toBe(req.body.pNum)
   expect(connection.release).toHaveBeenCalledTimes(1)
@@ -59,7 +59,7 @@ it('router users/sms_auth case 3', async() => {
   const NC_SMS = jest.fn()
   const redis = {set: jest.fn()}
   
-  await sms_auth(req, res, next, connection, NC_SMS, redis)
+  await (POST_sms_auth(connection, NC_SMS, redis))(req, res, next)
   
   expect(connection.query.mock.calls[0][1][0]).toBe(req.body.pNum)
   expect(connection.release).toHaveBeenCalledTimes(1)
@@ -81,7 +81,7 @@ it('router users/sms_auth case 4', async() => {
   const NC_SMS = jest.fn()
   const redis = {set: jest.fn()}
   
-  await sms_auth(req, res, next, connection, NC_SMS, redis)
+  await (POST_sms_auth(connection, NC_SMS, redis))(req, res, next)
   
   expect(connection.query).toHaveBeenCalledTimes(0)
   expect(connection.release).toHaveBeenCalledTimes(1)

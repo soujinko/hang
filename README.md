@@ -17,7 +17,7 @@
 </p>
 
 ## 🏘 <a href="https://hanging.kr">Home Page</a> / <a href="https://play.google.com/store/apps/details?id=kr.hanging.twa">PlayStore</a>
-## <a href="https://github.com/BJS-kr/HANG-BackEnd/wiki">📌 기술 및 고민 정리 - WIKI</a>
+## <a href="https://github.com/soujinko/hang/wiki">📌 기술 및 고민 정리 - WIKI</a>
 나만 아는곳, 너만 아는 곳. 함께 여행을 떠나봐요 ! 
 
 ## 🎉 행(HANG) 서비스 소개

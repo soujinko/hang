@@ -37,6 +37,7 @@ router.post(
   xssFilter, 
   POST_sms_auth(connection, NC_SMS, redis)
   );
+
 router.post(
   "/p_auth", 
   xssFilter, 
@@ -44,26 +45,31 @@ router.post(
     POST_p_auth(redis)
     )
   );
+
 router.post(
   "/duplicate", 
   xssFilter, 
   POST_duplicate(connection)
   );
+
 router.post(
   "/", 
   xssFilter, 
   POST(Crypto, connection, ITERATION_NUM)
   );
+
 router.post(
   "/signin", 
   xssFilter, 
   POST_signIn(passport, jwt, connection, PRIVATE_KEY)
   );
+
 router.delete(
   "/signout", 
   verification, 
   DELETE_signOut()
   );
+
 router.get(
   "/chat", 
   verification, 
@@ -71,6 +77,7 @@ router.get(
     GET_chat(zscanner, connection, redis)
     )
   );
+
 router.get(
   '/block', 
   verification, 
@@ -78,6 +85,7 @@ router.get(
     GET_block(redis, connection)
     )
   );
+
 router.post(
   '/block', 
   xssFilter, 
@@ -86,6 +94,7 @@ router.post(
     POST_block(redis, connection)
     )
   );
+
 router.patch(
   '/block', 
   verification, 
@@ -93,6 +102,7 @@ router.patch(
     PATCH_block(redis)
     )
   );
+
 router.delete(
   '/quit', 
   verification, 
@@ -100,11 +110,13 @@ router.delete(
     DELETE_quit(zscanner, redis, connection)
     )
   );
+
 router.post(
   '/exists', 
   xssFilter, 
   POST_exists(connection)
   );
+
 router.post(
   '/password', 
   xssFilter, 

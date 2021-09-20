@@ -33,9 +33,20 @@ const POST_p_auth = (redis) => {
 }
 
 const POST_duplicate = (connection) => {
+  function typeChecker(val) {
+    return Object.prototype.toString.call(val).slice(8, -1) === 'String'
+  }
   return (
     async(req, res, next) => {
       const { userId, nickname } = req.body;
+      
+      if (
+          !(
+            ((userId && !nickname) && typeChecker(userId)) || 
+            ((nickname && !userId) && typeChecker(nickname))
+           )
+         ) return res.sendStatus(409)
+      
       const sequel = 
         userId
         ? `SELECT userPk FROM users WHERE userId=?`
